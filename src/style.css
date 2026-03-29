@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- SMOOTH SCROLLING FIX --- */
+html {
+  /* 1. Makes the scroll animate instead of snap */
+  scroll-behavior: smooth;
+
+  /* 2. Offsets the scroll destination so the title isn't hidden behind your header */
+  /* 80px is roughly the height of your header */
+  scroll-padding-top: 100px;
+}
+
+body {
+  background-color: #f5f7fa;
+}
