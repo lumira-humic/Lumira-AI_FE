@@ -34,26 +34,31 @@ VITE_APP_ENV=development
 
 
 ## Codebase
-- Pastikan kasih space 1 line untuk pemisahan import berdasarkan library/framework/instalassion dan local file. Contoh
-- Urutan pengimportan berdasarkan level luar ke dalam, contoh = service->component->ui->assets. Contoh
+
+### Import Rules
+
+- Beri **1 baris kosong** untuk memisahkan:
+  - Library / framework / installation
+  - Local file
+- Penulisan import local file diurutkan berdasarkan level paling luar sampai dalam = service->component->ui->assets
+- Beri **2 baris kosong** untuk jarak dari area import ke area code
+
+#### Contoh:
+```js
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
+import { userIcon } from "lucide";
 
 import { dataService } from "@/services/dataService.js";
+import AboutPage from "@pages/AboutPage"
 import InfoCard from "../components/InfoCard.vue";
 import PatientIcon from "@/assets/admin/patient.png";
 
-- Pastikan kasih space 2 line dari are import ke area core code dalam suatu file. Contoh
-import { computed, ref } from "vue";
-import { defineStore } from "pinia";
 
-import { dataService } from "@/services/dataService.js";
-import InfoCard from "../components/InfoCard.vue";
-import PatientIcon from "@/assets/admin/patient.png";
-
-
-code
-
+<template>
+    <div></div>
+</template>
+```
 
 - Pastikan penulisan commit mengikuti kaidah
 https://www.conventionalcommits.org/en/v1.0.0/
