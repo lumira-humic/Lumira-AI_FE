@@ -10,7 +10,7 @@
         <!-- <span class="logo-text">Lumira AI</span> -->
       </div>
 
-      <ul class="nav-links">
+      <ul class="nav-links font-normal text-neutral-700">
         <li><a href="#features">Key Features</a></li>
         <li><a href="#how-it-works">How It Works</a></li>
         <li><a href="#why-us">Why Choose Us?</a></li>
@@ -18,7 +18,7 @@
 
       <button 
         @click="$emit('open-login')"
-        class="bg-[#0099ff] text-white px-6 py-2.5 rounded-full font-bold hover:bg-[#007acc] transition-colors cursor-pointer"
+        class="text-lg bg-[#0099ff] text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-[#007acc] transition-colors cursor-pointer"
       >
         Login
       </button>
@@ -72,9 +72,6 @@
 
 .nav-links a {
   text-decoration: none;
-  color: #555;
-  font-weight: 600;
-  font-size: 1rem;
   transition: color 0.3s ease;
 }
 

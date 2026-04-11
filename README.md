@@ -1,6 +1,6 @@
-# Lumira AI FE (JavaScript)
+# Project
 
-Frontend base workspace untuk integrasi API backend (tanpa Supabase logic di FE).
+Frontend base workspace for LUMIRA AI
 
 ## Stack
 
@@ -13,7 +13,7 @@ Frontend base workspace untuk integrasi API backend (tanpa Supabase logic di FE)
 - Socket.IO Client
 - Tailwind CSS v4
 
-## Jalankan Project
+## How to run
 
 ```bash
 npm install
@@ -30,48 +30,32 @@ VITE_WS_BASE_URL=http://localhost:3000
 VITE_FILE_BASE_URL=http://localhost:3000/files
 VITE_AI_API_URL=http://localhost:8000
 VITE_APP_ENV=development
-VITE_SENTRY_DSN=
-VITE_FEATURE_CHAT_ENABLED=true
-VITE_FEATURE_MEDGEMMA_ENABLED=true
-VITE_MAX_UPLOAD_MB=10
 ```
 
-## Struktur Folder
 
-```text
-src/
-	assets/
-	components/
-	composables/
-	layouts/
-	lib/
-		httpClient.js   # Axios client + auth interceptor
-		pinia.js        # Pinia instance
-		queryClient.js  # TanStack Query client
-		socketClient.js # Socket.IO client helper
-	router/
-	services/
-		authService.js  # Auth API service
-		dataService.js  # Domain API service (doctor/patient/record/activity)
-		aiService.js    # AI endpoint adapter
-	stores/
-		appStore.js     # Session, role map, feature toggles
-	views/
-```
+## Codebase
+- Pastikan kasih space 1 line untuk pemisahan import berdasarkan library/framework/instalassion dan local file. Contoh
+- Urutan pengimportan berdasarkan level luar ke dalam, contoh = service->component->ui->assets. Contoh
+import { computed, ref } from "vue";
+import { defineStore } from "pinia";
 
-## Titik Logic Utama
+import { dataService } from "@/services/dataService.js";
+import InfoCard from "../components/InfoCard.vue";
+import PatientIcon from "@/assets/admin/patient.png";
 
-- App bootstrap: `src/main.js`
-- Global state: `src/stores/appStore.js`
-- Axios handler + auth header interceptor: `src/lib/httpClient.js`
-- Server-state client: `src/lib/queryClient.js`
-- Realtime client: `src/lib/socketClient.js`
-- Route + RBAC guard: `src/router/index.js`
+- Pastikan kasih space 2 line dari are import ke area core code dalam suatu file. Contoh
+import { computed, ref } from "vue";
+import { defineStore } from "pinia";
 
-## Catatan Integrasi API
+import { dataService } from "@/services/dataService.js";
+import InfoCard from "../components/InfoCard.vue";
+import PatientIcon from "@/assets/admin/patient.png";
 
-- Endpoint bisnis utama sekarang berjalan via service API-first:
-	- `src/services/authService.js`
-	- `src/services/dataService.js`
-- Tidak ada lagi operasi bisnis utama yang langsung memanggil Supabase dari browser.
-- Bila kontrak endpoint backend berubah, sesuaikan mapping request/response di service tersebut.
+
+code
+
+
+- Pastikan penulisan commit mengikuti kaidah
+https://www.conventionalcommits.org/en/v1.0.0/
+
+- Jika ada code yang dirasa compleks/bersangkutan dengan banyak kondisi, wajib menuliskan komentar
