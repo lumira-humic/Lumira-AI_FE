@@ -8,19 +8,27 @@ defineProps({
     type: String,
     default: "Search...",
   },
+  wrapperClass: {
+    type: String,
+    default: "max-w-xs",
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 defineEmits(["update:modelValue"]);
 </script>
 
 <template>
-  <div class="relative w-full max-w-xs">
+  <div :class="['relative w-full', wrapperClass]">
     <div
-      class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+      class="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none"
     >
       <!-- Search Icon SVG -->
       <svg
-        class="h-5 w-5 text-gray-400"
+        class="h-5 w-5 text-neutral-400"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 20 20"
         fill="currentColor"
@@ -36,8 +44,9 @@ defineEmits(["update:modelValue"]);
     <input
       :value="modelValue"
       @input="$emit('update:modelValue', $event.target.value)"
+      :disabled="disabled"
       type="text"
-      class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-[12px] leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out"
+      class="text-sm sm:text-base block w-full pl-5 pr-5 py-3 rounded-full leading-5 bg-white placeholder-neutral-500 focus:outline-none focus:placeholder-neutral-400 focus:ring-2 focus:ring-sky-500 focus:ring-inset transition duration-150 ease-in-out disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500 disabled:focus:ring-0"
       :placeholder="placeholder"
     />
   </div>

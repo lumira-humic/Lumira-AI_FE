@@ -11,7 +11,8 @@ defineEmits(['close', 'confirm'])
 </script>
 
 <template>
-    <BaseModal :isOpen="isOpen" title="Delete Doctor" maxWidth="max-w-sm" @close="$emit('close')">
+    <BaseModal 
+    :isOpen="isOpen" title="Delete Doctor" maxWidth="max-w-sm" @close="$emit('close')" :showCloseButton="false" :closeOnBackdrop="false" :centerTitle="true">
         <div class="text-center">
             <div class="bg-red-100 text-red-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -21,17 +22,17 @@ defineEmits(['close', 'confirm'])
                 </svg>
             </div>
             <p class="text-gray-600 mb-1">Are you sure you want to delete</p>
-            <p class="font-bold text-gray-800 text-lg mb-4">{{ doctor?.name || 'this doctor' }}?</p>
+            <p class="font-bold text-gray-800 text-lg mb-2">{{ doctor?.name || 'this doctor' }}?</p>
             <p class="text-sm text-gray-400">This action cannot be undone.</p>
         </div>
 
         <template #footer>
             <button @click="$emit('close')"
-                class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium">
+                class="cursor-pointer px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium">
                 Cancel
             </button>
             <button @click="$emit('confirm')"
-                class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium shadow-sm hover:shadow">
+                class="cursor-pointer px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium shadow-sm hover:shadow">
                 Delete
             </button>
         </template>

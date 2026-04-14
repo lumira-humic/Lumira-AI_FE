@@ -48,8 +48,9 @@ const handleSubmit = () => {
     :isOpen="isOpen"
     title="Edit Doctor"
     @close="$emit('close')"
-    :showCloseButton="false"
+    :showCloseButton="true"
     :centerTitle="true"
+    :closeOnBackdrop="false"
   >
     <div class="space-y-6 px-2">
       <!-- Name -->
