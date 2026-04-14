@@ -1,23 +1,22 @@
 <script setup>
 import { ref } from "vue";
 import { useForm } from "vee-validate";
-import { toTypedSchema } from "@vee-validate/zod";
-import { z } from "zod";
 import { useRouter, useRoute } from "vue-router";
+import { X, Eye } from '@lucide/vue';
+
 import { authService } from "@/services/authService";
 import { useAppStore } from "@/stores/appStore";
+import { getApiErrorMessage, getApiFieldErrors } from "@/lib/apiResponse";
+import { loginSchema } from "@/lib/validation/auth.validation";
+import { useToast } from "@/composables/useToast";
+
 
 const emit = defineEmits(["close"]);
 const router = useRouter();
 const route = useRoute();
 const appStore = useAppStore();
+const toast = useToast();
 
-const loginSchema = toTypedSchema(
-  z.object({
-    email: z.string().min(1, "Email is required").email("Invalid email format"),
-    password: z.string().min(1, "Password is required"),
-  }),
-);
 
 const { handleSubmit, defineField, errors, isSubmitting } = useForm({
   validationSchema: loginSchema,
@@ -27,6 +26,7 @@ const [email, emailAttrs] = defineField("email");
 const [password, passwordAttrs] = defineField("password");
 const showPassword = ref(false);
 const authError = ref("");
+const backendFieldErrors = ref([]);
 
 const handleClose = () => {
   emit("close");
@@ -37,35 +37,47 @@ const handleClose = () => {
 
 const handleLogin = handleSubmit(async (values) => {
   authError.value = "";
+  backendFieldErrors.value = [];
 
   try {
-    const { role, userDetails, session } = await authService.login(
+    const { role, user, accessToken, refreshToken } = await authService.login(
       values.email,
       values.password,
     );
 
     appStore.setSession({
-      token: session?.access_token || "",
-      user: {
-        ...userDetails,
-        role,
-        email: values.email,
-        name: userDetails.name || values.email.split("@")[0],
-      },
+      accessToken,
+      refreshToken,
+      role,
+      user,
     });
 
     emit("close");
+
+    const redirectPath =
+      typeof route.query.redirect === "string" ? route.query.redirect : "";
+
+    if (redirectPath) {
+      router.push(redirectPath);
+      return;
+    }
 
     if (role === "admin") {
       router.push("/admin");
     } else if (role === "doctor") {
       router.push("/doctor/dashboard");
+    } else if (role === "patient") {
+      router.push("/patient/dashboard");
     } else {
       router.push("/");
     }
   } catch (error) {
-    console.error("Login failed:", error);
-    authError.value = error.message || "Invalid credentials or login failed.";
+    backendFieldErrors.value = getApiFieldErrors(error);
+    authError.value = getApiErrorMessage(
+      error,
+      "Invalid credentials or login failed.",
+    );
+    toast.error(authError.value);
   }
 });
 
@@ -76,44 +88,40 @@ const togglePassword = () => {
 
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center px-4">
+    <!-- Background Layout -->
     <div
-      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      @click="handleClose"
-    ></div>
+      class="absolute inset-0 bg-black/40 backdrop-blur-sm"
+    >
+    </div>
+    <!-- Form -->
     <div
       class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative z-10 animate-fade-in-up"
     >
+      <!-- Close Button -->
       <button
         @click="handleClose"
-        class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+        class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="w-6 h-6"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
+        <X class="w-6 h-6" />
       </button>
-
-      <h1 class="text-2xl font-bold text-gray-800 text-center mb-8">Login</h1>
-
+      <h1 class="text-lg sm:text-xl xl:text-2xl font-semibold text-gray-800 text-center mb-8">Login</h1>
+      <!-- Error Global Message -->
       <div
         v-if="authError"
-        class="mb-4 p-3 bg-red-50 text-red-500 text-sm rounded-lg border border-red-200 text-center"
+        class="mb-2 p-2 bg-red-50 text-red-500 text-sm rounded-lg border border-red-100"
       >
         {{ authError }}
-      </div>
 
+        <ul v-if="backendFieldErrors.length > 0" class="mt-2 space-y-1 text-left text-xs">
+          <li v-for="fieldError in backendFieldErrors" :key="`${fieldError.field}-${fieldError.message}`">
+            - {{ fieldError.message }}
+          </li>
+        </ul>
+      </div>
+      <!-- Main Content -->
       <form @submit.prevent="handleLogin" class="space-y-6">
-        <div class="space-y-2">
+        <!-- Email  -->
+        <div class="flex flex-col gap-2">
           <label class="text-gray-600 font-medium ml-1">Email</label>
           <input
             v-model="email"
@@ -124,8 +132,8 @@ const togglePassword = () => {
           />
           <p v-if="errors.email" class="text-red-500 text-xs ml-1">{{ errors.email }}</p>
         </div>
-
-        <div class="space-y-2">
+        <!-- Password -->
+        <div class="flex flex-col gap-2">
           <label class="text-gray-600 font-medium ml-1">Password</label>
           <div class="relative">
             <input
@@ -140,26 +148,7 @@ const togglePassword = () => {
               @click="togglePassword"
               class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
             >
-              <svg
-                v-if="!showPassword"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-5 h-5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
+              <Eye v-if="!showPassword" class="w-5 h-5" />
               <svg
                 v-else
                 xmlns="http://www.w3.org/2000/svg"
@@ -179,14 +168,14 @@ const togglePassword = () => {
           </div>
           <p v-if="errors.password" class="text-red-500 text-xs ml-1">{{ errors.password }}</p>
         </div>
-
+        <!-- Action Button -->
         <button
           type="submit"
           :disabled="isSubmitting"
-          class="w-full bg-sky-500 hover:bg-sky-600 disabled:bg-sky-300 text-white font-bold py-3 rounded-full transition-colors cursor-pointer mt-8 shadow-md hover:shadow-lg flex justify-center items-center"
+          class="cursor-pointer w-full bg-sky-500 hover:bg-sky-600 disabled:bg-sky-300 text-white font-bold py-3 rounded-full transition-colors mt-10 flex justify-center items-center disabled:cursor-not-allowed disabled:shadow-none"
         >
           <span v-if="isSubmitting">Logging in...</span>
-          <span v-else>Get in</span>
+          <span class="text-base sm:text-lg 2xl:text-xl font-semibold" v-else>Get in</span>
         </button>
       </form>
     </div>

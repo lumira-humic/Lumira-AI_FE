@@ -2,10 +2,12 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 import { pinia } from '@/lib/pinia';
 import { useAppStore } from '@/stores/appStore';
+import { authService } from '@/services/authService';
 // 1. LAYOUTS
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import DoctorLayout from '@/layouts/DoctorLayout.vue'
+import PatientLayout from '@/layouts/PatientLayout.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 // 2. VIEWS & COMPONENTS
 import HomeView from '@/views/public/HomeView.vue'
@@ -14,6 +16,7 @@ import DashboardHome from '@/views/admin/page/DashboardHome.vue'
 import DashboardDoctor from '@/views/admin/page/DashboardDoctor.vue'
 import DashboardPatient from '@/views/admin/page/DashboardPatient.vue'
 import DoctorDashboardHome from '@/views/doctor/DashboardHome.vue'
+import PatientDashboardHome from '@/views/patient/DashboardHome.vue'
 import ReviewConsole from '@/views/doctor/ReviewConsole.vue'
 
 
@@ -60,32 +63,62 @@ const router = createRouter({
         { path: 'dashboard', name: 'doctor-dashboard', component: DoctorDashboardHome },
         { path: 'review/:id', name: 'review-console', component: ReviewConsole, props: true }
       ]
+    },
+    // PATIENT
+    {
+      path: '/patient',
+      component: PatientLayout,
+      meta: { requiresAuth: true, role: 'patient' },
+      children: [
+        { path: '', redirect: '/patient/dashboard' },
+        { path: 'dashboard', name: 'patient-dashboard', component: PatientDashboardHome }
+      ]
     }
   ]
 })
 
 // Navigation Guard
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to) => {
   const appStore = useAppStore(pinia)
+  if (!appStore.isAuthenticated) {
+    appStore.hydrateSession()
+  }
 
-  if (to.meta.requiresAuth) {
-    if (!appStore.currentRole && !appStore.isAuthenticated) {
-      appStore.hydrateSession()
-    }
-
-    const userRole = appStore.currentRole || localStorage.getItem('userRole')
-    if (!userRole) {
-      next('/login')
-      return
-    }
-    if (to.meta.role && to.meta.role !== userRole) {
-      if (userRole === 'admin') next('/admin')
-      else if (userRole === 'doctor') next('/doctor/dashboard')
-      else next('/login')
-      return
+  if (appStore.isAuthenticated && !appStore.currentRole) {
+    try {
+      const profile = await authService.getUser()
+      appStore.setProfile(profile)
+    } catch (error) {
+      appStore.clearSession()
     }
   }
-  next()
+
+  if (to.name === 'login' && appStore.isAuthenticated) {
+    if (appStore.currentRole === 'admin') return '/admin'
+    if (appStore.currentRole === 'doctor') return '/doctor/dashboard'
+    if (appStore.currentRole === 'patient') return '/patient/dashboard'
+    return '/'
+  }
+
+  if (to.meta.requiresAuth) {
+    const userRole = appStore.currentRole || localStorage.getItem('userRole') || ''
+    if (!userRole) {
+      return {
+        path: '/login',
+        query: { redirect: to.fullPath },
+      }
+    }
+
+    if (to.meta.role && to.meta.role !== userRole) {
+      if (userRole === 'admin') return '/admin'
+      if (userRole === 'doctor') return '/doctor/dashboard'
+      if (userRole === 'patient') return '/patient/dashboard'
+
+      return '/login'
+    }
+  }
+
+  return true
 })
 
 export default router

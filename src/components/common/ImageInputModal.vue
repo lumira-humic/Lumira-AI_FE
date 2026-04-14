@@ -59,7 +59,6 @@ const closeModal = () => {
         </div>
 
         <div class="space-y-4">
-
             <div v-if="activeTab === 'upload'">
                 <label
                     class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">

@@ -12,18 +12,13 @@ import ModalUploadImage from "../components/ModalUploadImage.vue";
 import ModalAnalyzing from "../components/ModalAnalyzing.vue";
 import Pagination from "@/components/common/Pagination.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
-import InfoCard from "../components/InfoCard.vue";
 // ICONS
 import PatientIcon from "@/assets/admin/patient.png";
-import DoctorIcon from "@/assets/admin/doctor.png";
-import ImageIcon from "@/assets/admin/image.png";
-import WaitingIcon from "@/assets/admin/waiting.png";
 import EditIcon from "@/assets/admin/edit.png";
 import DeleteIcon from "@/assets/admin/delete.png";
 
 
 const patientList = ref([]);
-const stats = ref([]);
 const searchQuery = ref("");
 const isAddModalOpen = ref(false);
 const isEditModalOpen = ref(false);
@@ -42,16 +37,14 @@ const toast = useToast();
 
 const fetchPatients = async () => {
   isLoading.value = true;
+  errorMessage.value = "";
   try {
-    const [patients, statsData] = await Promise.all([
-      dataService.getPatients(),
-      dataService.getDashboardStats(),
-    ]);
+    const patients = await dataService.getPatients();
     patientList.value = patients;
-    stats.value = statsData;
   } catch (error) {
     console.error("Error fetching data:", error);
-    errorMessage.value = "Failed to load data.";
+    patientList.value = [];
+    errorMessage.value = "Failed to load data. Please try again.";
     toast.error("Failed to load data");
   } finally {
     isLoading.value = false;
@@ -63,10 +56,10 @@ const filteredPatients = computed(() => {
   const lowerQuery = searchQuery.value.toLowerCase();
   return patientList.value.filter(
     (p) =>
-      p.name.toLowerCase().includes(lowerQuery) ||
-      p.email.toLowerCase().includes(lowerQuery) ||
-      p.id.toString().includes(lowerQuery) ||
-      p.phone.includes(lowerQuery),
+      String(p.name || "").toLowerCase().includes(lowerQuery) ||
+      String(p.email || "").toLowerCase().includes(lowerQuery) ||
+      String(p.id || "").toLowerCase().includes(lowerQuery) ||
+      String(p.phone || "").toLowerCase().includes(lowerQuery),
   );
 });
 
@@ -264,154 +257,134 @@ const handleReAnalysis = async () => {
 </script>
 
 <template>
-  <div>
-    <!-- Header -->
-    <div class="text-center mb-8">
-      <h2 class="text-gray-500 font-medium text-lg">
-        Leading-edge technology for better diagnosis
-      </h2>
-    </div>
-    <!-- Loader and Error -->
-    <div v-if="isLoading" class="flex justify-center py-12">
-      <Loading text="Loading patients..." />
-    </div>
-    <div v-else-if="errorMessage" class="text-center py-8 text-red-500">
-      {{ errorMessage }}
-    </div>
-    <!-- Main Content -->
-    <div v-if="!isLoading && !errorMessage">
-      <!-- Info Cards (Incoming UI) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        <InfoCard
-          title="Total Patient"
-          :value="stats[0]?.value || 0"
-          :icon="PatientIcon"
-          theme="blue"
+  <section class="w-full">
+    <div>
+      <!-- Header -->
+      <div class="mb-5 flex flex-col sm:flex-row items-center justify-between lg:justify-end gap-3 sm:gap-6">
+        <SearchInput
+          v-model="searchQuery"
+          :disabled="isLoading || !!errorMessage"
+          placeholder="Search"
+          wrapperClass="max-w-none"
         />
-        <InfoCard
-          title="Total Doctor"
-          :value="stats[1]?.value || 0"
-          :icon="DoctorIcon"
-          theme="dark-blue"
-        />
-        <InfoCard
-          title="Image Uploaded"
-          :value="stats[2]?.value || 0"
-          :icon="ImageIcon"
-          theme="green"
-        />
-        <InfoCard
-          title="Waiting For Review"
-          :value="stats[3]?.value || 0"
-          :icon="WaitingIcon"
-          theme="red"
-        />
+        <button
+          @click="openAddModal"
+          class="w-full sm:w-fit cursor-pointer whitespace-nowrap rounded-lg bg-[#0D99FF] px-6 py-2.5 text-base sm:text-xl font-semibold text-white transition-colors hover:bg-[#058ee3]"
+        >
+          Add Patient
+        </button>
       </div>
-      <div class="w-full flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold">Patients Management</h1>
-        <div class="flex gap-4 items-center">
-          <SearchInput v-model="searchQuery" placeholder="Search patient..." />
+      <!-- Table Header -->
+      <div
+        class="grid grid-cols-7 px-3 py-2 text-lg font-semibold text-neutral-600"
+      >
+        <div class="col-span-1"></div>
+        <div class="col-span-1">ID</div>
+        <div class="col-span-1">Name</div>
+        <div class="col-span-1">Phone</div>
+        <div class="col-span-1 text-center">Image</div>
+        <div class="col-span-1 text-center">Review</div>
+        <div class="col-span-1 text-center">Action</div>
+      </div>
+      <!-- Table Data -->
+      <div class="max-h-128 space-y-2 overflow-y-auto pr-1">
+        <!-- If loading -->
+        <div v-if="isLoading" class="py-12">
+          <Loading text="Loading patients..." />
+        </div>
+        <!-- If error -->
+        <div v-else-if="errorMessage" class="mt-3 rounded-xl bg-red-50 py-8 text-center border-2 border-red-200 text-red-600">
+          <p class="mb-4 font-medium">{{ errorMessage }}</p>
           <button
-            @click="openAddModal"
-            class="whitespace-nowrap bg-blue-500 hover:bg-blue-600 text-white py-3 px-6 rounded-[12px] font-medium transition-colors"
+            @click="fetchPatients"
+            class="cursor-pointer rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
           >
-            Add Patient
+            Retry
           </button>
         </div>
-      </div>
-      <div
-        class="w-full flex p-3 bg-white border rounded-[12px] text-gray-500 font-medium mb-2"
-      >
-        <div class="flex-[0.5] h-10 flex items-center justify-center">ID</div>
-        <div class="flex-1 h-10 flex items-center justify-center">Name</div>
-        <div class="flex-1 h-10 flex items-center justify-center">Email</div>
-        <div class="flex-1 h-10 flex items-center justify-center">Phone</div>
-        <div class="flex-1 h-10 flex items-center justify-center">Review</div>
-        <div class="flex-1 h-10 flex items-center justify-center">Image</div>
-        <div class="flex-1 h-10 flex items-center justify-center">Actions</div>
-      </div>
-      <div
-        class="w-full flex p-3 my-3 bg-gray-100 items-center rounded-[12px]"
-        v-for="patient in paginatedPatients"
-        :key="patient.id"
-      >
-        <div class="flex-[0.5] h-10 flex items-center justify-center">
-          <div>{{ patient.id }}</div>
-        </div>
+        <!-- If no data -->
         <div
-          class="flex-1 h-10 flex items-center justify-center overflow-hidden"
+          v-else-if="filteredPatients.length === 0"
+          class="rounded-xl bg-[#E8E8E8] py-10 text-center text-neutral-500"
         >
-          <div class="truncate max-w-[120px]" :title="patient.name">
-            {{ patient.name }}
-          </div>
+          No patients found.
         </div>
-        <div
-          class="flex-1 h-10 flex items-center justify-center overflow-hidden"
-        >
+        <!-- Else data row -->
+        <template v-else>
           <div
-            class="truncate max-w-[150px] text-sm text-gray-600"
-            :title="patient.email"
+            v-for="patient in paginatedPatients"
+            :key="patient.id"
+            class="grid grid-cols-7 items-center rounded-2xl bg-[#E8E8E8] px-3 py-3"
           >
-            {{ patient.email }}
+            <div class="col-span-1 flex items-center justify-center">
+              <img :src="PatientIcon" alt="Patient" class="h-10 w-10 object-contain" />
+            </div>
+            <div class="col-span-1 text-2xl font-semibold text-neutral-600">
+              P{{ String(patient.id || "").padStart(3, "0") }}
+            </div>
+            <div class="col-span-1 overflow-hidden text-2xl font-semibold text-neutral-600">
+              <div class="truncate" :title="patient.name">
+                {{ patient.name }}
+              </div>
+            </div>
+            <div class="col-span-1 text-xl font-semibold text-neutral-600">{{ patient.phone || "-" }}</div>
+            <div class="col-span-1 text-center">
+              <span v-if="patient.image" class="text-2xl font-semibold text-[#2BC11F]">Yes</span>
+              <span v-else class="text-2xl font-semibold text-red-500">No</span>
+            </div>
+            <div class="col-span-1 text-center">
+              <span
+                v-if="patient.review === 'VALIDATED' || patient.review === 'Done'"
+                class="text-2xl font-semibold text-[#2BC11F]"
+              >
+                Done
+              </span>
+              <span
+                v-else-if="patient.review === 'PENDING' || patient.review === 'Not Yet'"
+                class="text-2xl font-semibold text-[#0F79B7]"
+              >
+                Not Yet
+              </span>
+              <span
+                v-else-if="patient.review === 'REJECTED'"
+                class="text-2xl font-semibold text-red-500"
+              >
+                Rejected
+              </span>
+              <span v-else class="text-2xl font-semibold text-neutral-400">-</span>
+            </div>
+            <div class="col-span-1 flex items-center justify-center">
+              <div class="flex gap-2">
+                <button
+                  @click="openEditModal(patient)"
+                  class="p-2 transition-transform hover:scale-110"
+                >
+                  <img :src="EditIcon" alt="Edit" class="w-8 h-8" />
+                </button>
+                <button
+                  @click="openDeleteModal(patient)"
+                  class="p-2 transition-transform hover:scale-110"
+                >
+                  <img :src="DeleteIcon" alt="Delete" class="w-8 h-8" />
+                </button>
+                <button
+                  v-if="!patient.image"
+                  @click="openUploadModal(patient)"
+                  class="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-600 border border-blue-200"
+                >
+                  + Image
+                </button>
+                <button
+                  v-else
+                  @click="openAIModal(patient)"
+                  class="rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-600 border border-green-200"
+                >
+                  View
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="flex-1 h-10 flex items-center justify-center">
-          <div>{{ patient.phone }}</div>
-        </div>
-        <div class="flex-1 h-10 flex items-center justify-center px-2">
-          <span
-            v-if="patient.review === 'VALIDATED'"
-            class="bg-green-100 text-green-600 py-1 px-3 rounded-full text-xs font-bold border border-green-200"
-          >
-            Validated
-          </span>
-          <span
-            v-else-if="patient.review === 'PENDING'"
-            class="bg-yellow-100 text-yellow-600 py-1 px-3 rounded-full text-xs font-bold border border-yellow-200"
-          >
-            Pending
-          </span>
-          <span
-            v-else-if="patient.review === 'REJECTED'"
-            class="bg-red-100 text-red-600 py-1 px-3 rounded-full text-xs font-bold border border-red-200"
-          >
-            Rejected
-          </span>
-          <span v-else class="text-gray-400 font-bold"> - </span>
-        </div>
-        <div class="flex-1 h-10 flex items-center justify-center">
-          <button
-            @click="openUploadModal(patient)"
-            v-if="!patient.image"
-            class="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold py-1.5 px-3 rounded-lg transition-colors border border-blue-200"
-          >
-            + Add Image
-          </button>
-          <button
-            @click="openAIModal(patient)"
-            v-else
-            class="bg-green-50 text-green-600 hover:bg-green-100 text-xs font-semibold py-1.5 px-3 rounded-lg transition-colors border border-green-200"
-          >
-            See Image
-          </button>
-        </div>
-        <div class="flex-1 h-10 flex items-center justify-center">
-          <div class="gap-2 flex">
-            <!-- New Icon Buttons (Incoming UI) -->
-            <button
-              @click="openEditModal(patient)"
-              class="p-2 transition-transform hover:scale-110"
-            >
-              <img :src="EditIcon" alt="Edit" class="w-8 h-8" />
-            </button>
-            <button
-              @click="openDeleteModal(patient)"
-              class="p-2 transition-transform hover:scale-110"
-            >
-              <img :src="DeleteIcon" alt="Delete" class="w-8 h-8" />
-            </button>
-          </div>
-        </div>
+        </template>
       </div>
       <!-- Modal Components -->
       <ModalAddPatient
@@ -446,10 +419,11 @@ const handleReAnalysis = async () => {
       <ModalAnalyzing :isOpen="isAnalyzing" />
       <!-- Pagination -->
       <Pagination
+        v-if="!isLoading && !errorMessage"
         :current-page="currentPage"
         :total-pages="totalPages"
         @page-change="handlePageChange"
       />
     </div>
-  </div>
+  </section>
 </template>

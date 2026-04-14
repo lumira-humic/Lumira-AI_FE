@@ -9,12 +9,8 @@ import ModalEditDoctor from "../components/ModalEditDoctor.vue";
 import ModalDeleteDoctor from "../components/ModalDeleteDoctor.vue";
 import Pagination from "@/components/common/Pagination.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
-import InfoCard from "../components/InfoCard.vue";
 // ICONS
-import PatientIcon from "@/assets/admin/patient.png";
 import DoctorIcon from "@/assets/admin/doctor.png";
-import ImageIcon from "@/assets/admin/image.png";
-import WaitingIcon from "@/assets/admin/waiting.png";
 import EditIcon from "@/assets/admin/edit.png";
 import DeleteIcon from "@/assets/admin/delete.png";
 
@@ -24,7 +20,6 @@ const toast = useToast();
 const heads = ["ID", "Name", "Email", "Status", "Actions"];
 
 const doctorList = ref([]);
-const stats = ref([]);
 const searchQuery = ref("");
 const isAddModalOpen = ref(false);
 const isEditModalOpen = ref(false);
@@ -38,16 +33,14 @@ const itemsPerPage = 10;
 
 const fetchDoctors = async () => {
   isLoading.value = true;
+  errorMessage.value = "";
   try {
-    const [doctors, statsData] = await Promise.all([
-      dataService.getDoctors(),
-      dataService.getDashboardStats(),
-    ]);
+    const doctors = await dataService.getDoctors();
     doctorList.value = doctors;
-    stats.value = statsData;
   } catch (error) {
     console.error("Error fetching data:", error);
-    errorMessage.value = "Failed to load data.";
+    doctorList.value = [];
+    errorMessage.value = "Failed to load data. Please try again.";
     toast.error("Failed to load data");
   } finally {
     isLoading.value = false;
@@ -59,9 +52,9 @@ const filteredDoctors = computed(() => {
   const lowerQuery = searchQuery.value.toLowerCase();
   return doctorList.value.filter(
     (d) =>
-      d.name.toLowerCase().includes(lowerQuery) ||
-      d.email.toLowerCase().includes(lowerQuery) ||
-      d.id.toString().includes(lowerQuery),
+      String(d.name || "").toLowerCase().includes(lowerQuery) ||
+      String(d.email || "").toLowerCase().includes(lowerQuery) ||
+      String(d.id || "").toLowerCase().includes(lowerQuery),
   );
 });
 
@@ -145,128 +138,110 @@ const handleDeleteDoctor = async () => {
 </script>
 
 <template>
-  <div class="p-6">
-    <div class="text-center mb-8">
-      <h2 class="text-gray-500 font-medium text-lg">
-        Leading-edge technology for better diagnosis
-      </h2>
-    </div>
-
-    <div v-if="isLoading" class="flex justify-center py-12">
-      <Loading text="Loading doctors..." />
-    </div>
-    <div v-else-if="errorMessage" class="text-center py-8 text-red-500">
-      {{ errorMessage }}
-    </div>
-
-    <div v-if="!isLoading && !errorMessage">
-      <!-- Info Cards (Incoming UI) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        <InfoCard
-          title="Total Patient"
-          :value="stats[0]?.value || 0"
-          :icon="PatientIcon"
-          theme="blue"
+  <section class="w-full">
+    <div>
+      <!-- Header -->
+      <div class="mb-5 flex flex-col sm:flex-row items-center justify-between lg:justify-end gap-4 sm:gap-6">
+        <SearchInput
+          v-model="searchQuery"
+          :disabled="isLoading || !!errorMessage"
+          placeholder="Search by ID or Name"
+          wrapperClass="max-w-none"
         />
-        <InfoCard
-          title="Total Doctor"
-          :value="stats[1]?.value || 0"
-          :icon="DoctorIcon"
-          theme="dark-blue"
-        />
-        <InfoCard
-          title="Image Uploaded"
-          :value="stats[2]?.value || 0"
-          :icon="ImageIcon"
-          theme="green"
-        />
-        <InfoCard
-          title="Waiting For Review"
-          :value="stats[3]?.value || 0"
-          :icon="WaitingIcon"
-          theme="red"
-        />
-      </div>
-
-      <div class="w-full flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Doctors Management</h1>
-        <div class="flex gap-4 items-center">
-          <SearchInput v-model="searchQuery" placeholder="Search doctor..." />
-          <button
-            @click="openAddModal"
-            class="whitespace-nowrap bg-blue-500 hover:bg-blue-600 text-white py-3 px-6 rounded-[12px] font-medium transition-colors"
-          >
-            Add Doctor
-          </button>
-        </div>
+        <button
+          @click="openAddModal"
+          class="w-full sm:w-fit cursor-pointer whitespace-nowrap rounded-xl bg-[#0D99FF] px-6 py-2.5 text-lg sm:text-xl font-semibold text-white transition-colors hover:bg-[#058ee3]"
+        >
+          Add Doctor
+        </button>
       </div>
       <!-- Table Header -->
       <div
-        class="w-full flex p-3 bg-white border rounded-[12px] text-gray-500 font-medium mb-2 mt-4"
+        class="grid grid-cols-6 px-3 py-2 text-lg font-semibold text-neutral-600"
       >
-        <div
-          v-for="head in heads"
-          :key="head"
-          class="flex-1 h-10 flex items-center justify-center"
-        >
-          {{ head }}
-        </div>
+        <div class="col-span-1"></div>
+        <div class="col-span-1">{{ heads[0] }}</div>
+        <div class="col-span-1">{{ heads[1] }}</div>
+        <div class="col-span-1">{{ heads[2] }}</div>
+        <div class="col-span-1">{{ heads[3] }}</div>
+        <div class="col-span-1 text-center">{{ heads[4] }}</div>
       </div>
-      <!-- Table Content (Using Paginated Data from Local Logic) -->
-      <div
-        class="w-full flex p-3 my-3 bg-gray-100 items-center rounded-[12px]"
-        v-for="doctor in paginatedDoctors"
-        :key="doctor.id"
-      >
-        <div class="flex-1 h-10 flex items-center justify-center">
-          <div>{{ doctor.id }}</div>
+      <!-- Table Data -->
+      <div class="max-h-128 space-y-2 overflow-y-auto pr-1">
+        <!-- If loading -->
+        <div v-if="isLoading" class="flex justify-center py-12">
+          <Loading text="Loading doctor data..." />
         </div>
+        <!-- If error -->
+        <div v-else-if="errorMessage" class="mt-3 rounded-xl bg-red-50 py-8 text-center border-2 border-red-200 text-red-600">
+          <p class="mb-4 font-medium">{{ errorMessage }}</p>
+          <button
+            @click="fetchDoctors"
+            class="cursor-pointer rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
+          >
+            Retry
+          </button>
+        </div>
+        <!-- If no data -->
         <div
-          class="flex-1 h-10 flex items-center justify-center overflow-hidden"
+          v-else-if="filteredDoctors.length === 0"
+          class="text-center py-8 text-gray-500"
         >
-          <div class="truncate max-w-[150px]" :title="doctor.name">
-            {{ doctor.name }}
+          No doctors found.
+        </div>
+        <!-- Else data row -->
+        <template v-else>
+          <div
+            v-for="doctor in paginatedDoctors"
+            :key="doctor.id"
+            class="grid grid-cols-6 items-center rounded-2xl bg-[#E8E8E8] px-3 py-3"
+          >
+            <div class="col-span-1 flex items-center justify-center">
+              <img :src="DoctorIcon" alt="Doctor" class="h-10 w-10 object-contain" />
+            </div>
+            <div class="col-span-1 text-2xl font-semibold text-neutral-600">
+              D{{ String(doctor.id || "").padStart(3, "0") }}
+            </div>
+            <div class="col-span-1 overflow-hidden text-2xl font-semibold text-neutral-600">
+              <div class="truncate" :title="doctor.name">
+                {{ doctor.name }}
+              </div>
+            </div>
+            <div class="col-span-1 overflow-hidden text-xl font-semibold text-neutral-600">
+              <div class="truncate" :title="doctor.email">
+                {{ doctor.email }}
+              </div>
+            </div>
+            <div class="col-span-1 text-2xl font-semibold text-[#2BC11F]">
+              {{ doctor.status || "Active" }}
+            </div>
+            <div class="col-span-1 flex items-center justify-center">
+              <div class="flex gap-2">
+                <button
+                  @click="openEditModal(doctor)"
+                  class="p-2 transition-transform hover:scale-110"
+                >
+                  <img :src="EditIcon" alt="Edit" class="w-8 h-8" />
+                </button>
+                <button
+                  @click="openDeleteModal(doctor)"
+                  class="p-2 transition-transform hover:scale-110"
+                >
+                  <img :src="DeleteIcon" alt="Delete" class="w-8 h-8" />
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-        <div
-          class="flex-1 h-10 flex items-center justify-center overflow-hidden"
-        >
-          <div class="truncate max-w-[200px]" :title="doctor.email">
-            {{ doctor.email }}
-          </div>
-        </div>
-        <div
-          class="flex-1 h-10 flex items-center text-green-500 justify-center font-semibold"
-        >
-          <div>{{ doctor.status }}</div>
-        </div>
-        <div class="flex-1 h-10 flex items-center justify-center">
-          <div class="gap-2 flex">
-            <!-- New Icon Buttons (Incoming UI) -->
-            <button
-              @click="openEditModal(doctor)"
-              class="p-2 transition-transform hover:scale-110"
-            >
-              <img :src="EditIcon" alt="Edit" class="w-8 h-8" />
-            </button>
-            <button
-              @click="openDeleteModal(doctor)"
-              class="p-2 transition-transform hover:scale-110"
-            >
-              <img :src="DeleteIcon" alt="Delete" class="w-8 h-8" />
-            </button>
-          </div>
-        </div>
+        </template>
       </div>
-
+      <!-- Pagination -->
       <Pagination
+        v-if="!isLoading && !errorMessage"
         :current-page="currentPage"
         :total-pages="totalPages"
         @page-change="handlePageChange"
       />
     </div>
-    <Toast />
-
     <ModalAddDoctor
       :isOpen="isAddModalOpen"
       @close="isAddModalOpen = false"
@@ -284,5 +259,5 @@ const handleDeleteDoctor = async () => {
       @close="isDeleteModalOpen = false"
       @confirm="handleDeleteDoctor"
     />
-  </div>
+  </section>
 </template>
