@@ -13,7 +13,9 @@ const showLogin = ref(false);
   <div class="flex flex-col min-h-screen">
     <Header @open-login="showLogin = true" />
     <main class="flex-1">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <component :is="Component" @open-login="showLogin = true" />
+      </router-view>
     </main>
     <Footer />
 
