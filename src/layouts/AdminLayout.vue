@@ -1,34 +1,55 @@
 <script setup>
-import { ref } from 'vue';
-import { RouterView, useRoute, useRouter } from 'vue-router';
+import { computed, onMounted, ref } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
+import { Menu, X } from '@lucide/vue'
 
-import { authService } from '@/services/authService';
-import { useAppStore } from '@/stores/appStore';
-import BaseModal from '@/components/common/BaseModal.vue';
-import ModalChangePassword from '@/views/admin/components/ModalChangePassword.vue';
-import DashboardIcon from '@/assets/admin/dashboard-sidebar.png';
-import DoctorIcon from '@/assets/admin/doctor-sidebar.png';
-import PatientIcon from '@/assets/admin/patient-sidebar.png';
-import Logo from '@/assets/admin/logo.png';
+import { authService } from '@/services/authService'
+import { dataService } from '@/services/dataService'
+import { useAppStore } from '@/stores/appStore'
+import { useToast } from '@/composables/useToast'
+import BaseModal from '@/components/common/BaseModal.vue'
+import DashboardIcon from '@/assets/admin/dashboard-sidebar.png'
+import DoctorIcon from '@/assets/admin/doctor.png'
+import PatientIcon from '@/assets/admin/patient.png'
 
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
+const toast = useToast()
+
 const showLogoutModal = ref(false)
-const showChangePasswordModal = ref(false)
 const isSidebarOpen = ref(false)
+const isLoggingOut = ref(false)
+const sidebarBadges = ref({
+  doctor: 0,
+  patient: 0,
+})
 
 const menuItems = [
   { name: 'Dashboard', path: '/admin', image: DashboardIcon },
-  { name: 'Doctor', path: '/admin/doctors', image: DoctorIcon },
-  { name: 'Patient', path: '/admin/patients', image: PatientIcon },
+  { name: 'Total Doctor', path: '/admin/doctors', image: DoctorIcon, badgeKey: 'doctor' },
+  { name: 'Patient', path: '/admin/patients', image: PatientIcon, badgeKey: 'patient' },
 ]
 
+const pageTitle = computed(() => {
+  if (route.name === 'admin-doctors') {
+    return 'Doctor Management'
+  }
+
+  if (route.name === 'admin-patients') {
+    return 'Patient Management'
+  }
+
+  return 'Newest Activity'
+})
+
 const isActive = (path) => {
-  if (path === '/admin' && route.path === '/admin') return true
-  if (path !== '/admin' && route.path.startsWith(path)) return true
-  return false
+  if (path === '/admin') {
+    return route.path === '/admin'
+  }
+
+  return route.path.startsWith(path)
 }
 
 const toggleSidebar = () => {
@@ -36,10 +57,51 @@ const toggleSidebar = () => {
 }
 
 const handleLogoutClick = () => {
+  if (isLoggingOut.value) {
+    return
+  }
+
   showLogoutModal.value = true
 }
 
+const closeLogoutModal = () => {
+  if (isLoggingOut.value) {
+    return
+  }
+
+  showLogoutModal.value = false
+}
+
+const getBadgeValue = (badgeKey) => {
+  if (!badgeKey) {
+    return 0
+  }
+
+  return sidebarBadges.value[badgeKey] || 0
+}
+
+const refreshSidebarBadges = async () => {
+  try {
+    const stats = await dataService.getDashboardStats()
+    const totalDoctor = Number(stats.find((s) => s.label?.toLowerCase().includes('doctor'))?.value || 0)
+    const totalPatient = Number(stats.find((s) => s.label?.toLowerCase().includes('patient'))?.value || 0)
+
+    sidebarBadges.value = {
+      doctor: totalDoctor,
+      patient: totalPatient,
+    }
+  } catch (error) {
+    console.error('Failed to fetch sidebar stats:', error)
+  }
+}
+
 const confirmLogout = async () => {
+  if (isLoggingOut.value) {
+    return
+  }
+
+  isLoggingOut.value = true
+
   try {
     await authService.logout()
   } catch (error) {
@@ -47,164 +109,157 @@ const confirmLogout = async () => {
   }
 
   appStore.clearSession()
+  toast.success('Logout berhasil')
   showLogoutModal.value = false
+  isSidebarOpen.value = false
+  isLoggingOut.value = false
   router.push('/')
 }
 
-const handleChangePassword = () => {
-  showChangePasswordModal.value = true
-}
+onMounted(() => {
+  refreshSidebarBadges()
+})
 </script>
 
 <template>
-  <div class="flex h-screen bg-[#FAFAFA] font-sans text-gray-800">
-    <!-- Sidebar -->
-    <aside
-      class="w-72 flex flex-col bg-[#EDEDED] flex-shrink-0 transition-all duration-300 hidden lg:flex m-4 rounded-3xl h-[calc(100vh-2rem)] shadow-sm">
-      <!-- Brand / Logo Area -->
-      <div class="h-32 bg-gradient-to-b from-blue-300/60 to-blue-50/0 rounded-t-3xl flex flex-col justify-center px-6">
-        <div class="flex items-center gap-3">
-          <!-- Logo Image -->
-          <img :src="Logo" alt="Logo" class="w-10 h-10 object-contain" />
+  <div class="min-h-screen bg-[#F2F2F2]">
+    <!-- Header -->
+    <header class="bg-linear-to-r from-[#97D2F8] to-[#A8D8F6] rounded-b-[50px] px-3 sm:px-5 py-3 sm:py-4">
+      <div class="grid grid-cols-3 items-center">
+        <div class="flex col-span-3 lg:col-span-1 items-center gap-3 sm:gap-4">
+          <div class="h-14 w-14 rounded-full bg-white/95 shrink-0"></div>
           <div>
-            <div class="font-bold text-gray-700 text-base leading-tight">Admin Dashboard</div>
-            <div class="text-xs text-gray-500">Breast Cancer Analytics</div>
+            <p class="text-base font-semibold text-neutral-700">Admin Dashboard</p>
+            <p class="text-xs text-neutral-600">Breast Cancer Analytics</p>
           </div>
         </div>
+        <div class="hidden lg:flex lg:col-span-1 justify-center">
+          <p class="text-lg font-semibold text-neutral-600">Leading-edge technology for better diagnosis</p>
+        </div>
       </div>
-      <!-- Navigation Menu -->
-      <nav class="flex-1 px-4 py-8 space-y-4">
-        <router-link v-for="item in menuItems" :key="item.name" :to="item.path"
-          class="flex items-center justify-center px-4 py-3.5 rounded-2xl font-bold text-base transition-all duration-200 group relative shadow-sm border bg-white"
-          :class="isActive(item.path)
-            ? 'text-gray-800 border-gray-600 border-2'
-            : 'text-gray-600 border-transparent hover:border-gray-300'">
-          <!-- Icon Image -->
-          <img :src="item.image" :alt="item.name" class="w-5 h-5 mr-3 object-contain" />
-          {{ item.name }}
-        </router-link>
-      </nav>
-      <!-- Action Buttons -->
-      <div class="px-4 pb-8 pt-4 space-y-3 mb-4">
-        <!-- Change Password -->
-        <button @click="handleChangePassword"
-          class="flex items-center justify-center px-4 py-3.5 rounded-2xl bg-white text-[#0099ff] font-bold transition-all duration-200 w-full cursor-pointer hover:shadow-md shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mr-3">
-            <path fill-rule="evenodd"
-              d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z"
-              clip-rule="evenodd" />
-          </svg>
-          Change Password
-        </button>
-        <!-- Log Out -->
-        <button @click="handleLogoutClick"
-          class="flex items-center justify-center px-4 py-3.5 rounded-2xl bg-white text-red-600 font-bold transition-all duration-200 w-full cursor-pointer hover:shadow-md shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mr-3">
-            <path fill-rule="evenodd"
-              d="M16.5 3.75a1.5 1.5 0 0 1 1.5 1.5v13.5a1.5 1.5 0 0 1-1.5 1.5h-6a1.5 1.5 0 0 1-1.5-1.5V15a.75.75 0 0 0-1.5 0v3.75a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V5.25a3 3 0 0 0-3-3h-6a3 3 0 0 0-3 3V9A.75.75 0 1 0 9 9V5.25a1.5 1.5 0 0 1 1.5-1.5h6ZM5.78 8.47a.75.75 0 0 0-1.06 0l-3 3a.75.75 0 0 0 0 1.06l3 3a.75.75 0 0 0 1.06-1.06l-1.72-1.72H15a.75.75 0 0 0 0-1.5H4.06l1.72-1.72a.75.75 0 0 0 0-1.06Z"
-              clip-rule="evenodd" />
-          </svg>
-          Log Out
-        </button>
+    </header>
+    <!-- Main Content -->
+    <div class="px-3 sm:px-5 pt-6 sm:pt-10">
+      <div class="flex gap-8">
+        <!-- Left Sidebar/Content -->
+        <aside class="hidden lg:flex w-64 shrink-0 flex-col">
+          <h1 class="hidden lg:block mb-18 text-xl xl:text-2xl font-semibold text-gray-700">
+            {{ pageTitle }}
+          </h1>
+          <nav class="space-y-3">
+            <router-link
+              v-for="item in menuItems"
+              :key="item.path"
+              :to="item.path"
+              class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-6 transition-colors"
+              :class="isActive(item.path) ? 'font-semibold bg-[#C2E8FF]' : 'font-medium hover:bg-neutral-50'"
+            >
+              <div class="flex items-center gap-3">
+                <img :src="item.image" :alt="item.name" class="h-8 w-8 object-contain" />
+                <span class="text-neutral-600">{{ item.name }}</span>
+              </div>
+              <span
+                v-if="getBadgeValue(item.badgeKey) > 0"
+                class="inline-flex min-w-7 justify-center rounded-full bg-[#0099ff] px-2 py-1 text-sm font-bold text-white"
+              >
+                {{ getBadgeValue(item.badgeKey) }}
+              </span>
+            </router-link>
+          </nav>
+          <!-- Logout Button -->
+          <div class="mt-auto pt-4">
+            <button
+              @click="handleLogoutClick"
+              :disabled="isLoggingOut"
+              class="cursor-pointer flex w-full items-center gap-2 rounded-xl sm:rounded-2xl border-2 border-neutral-400 bg-white px-5 py-5 text-left text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <img src="@/assets/icons/logout-icon.png" alt="Logout Icon" class="h-7 w-7" />
+              <span class="text-sm sm:text-base font-semibold">Log Out</span>
+            </button>
+          </div>
+        </aside>
+        <!-- Main Data -->
+        <main class="min-w-0 flex-1">
+          <!-- Filter -->
+          <header class="mb-4 flex items-center justify-between lg:hidden">
+            <h1 class="block lg:hidden text-xl font-semibold text-gray-700">
+              {{ pageTitle }}
+            </h1>
+            <button @click="toggleSidebar" class="rounded-lg border border-neutral-300 bg-white p-2 text-neutral-600 cursor-pointer">
+              <Menu class="h-5 w-5" />
+            </button>
+          </header>
+          <!-- Table -->
+          <div class="h-[calc(100vh-9rem)] overflow-y-auto">
+            <RouterView />
+          </div>
+        </main>
       </div>
-    </aside>
-    <!-- Mobile/Tablet Sidebar Drawer -->
-    <div v-if="isSidebarOpen" class="fixed inset-0 z-50 lg:hidden flex">
-      <!-- Backdrop -->
-      <div class="fixed inset-0 bg-black/50 transition-opacity" @click="isSidebarOpen = false"></div>
-      <!-- Drawer Content -->
-      <div class="relative w-72 flex flex-col bg-[#EDEDED] h-full shadow-xl transition-transform animate-slide-in">
-        <!-- Close Button -->
-        <button @click="isSidebarOpen = false" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
-            class="w-6 h-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+    </div>
+    <!-- Right Sidebar/Content If tobe small screen -->
+    <div v-if="isSidebarOpen" class="fixed inset-0 z-50 flex lg:hidden">
+      <div class="absolute inset-0 bg-black/40" @click="isSidebarOpen = false"></div>
+      <div class="relative ml-auto flex h-full w-72 flex-col bg-[#F2F2F2] p-4">
+        <button
+          @click="isSidebarOpen = false"
+          class="mb-4 ml-auto rounded-lg border border-neutral-300 bg-white p-2 text-neutral-600 cursor-pointer"
+        >
+          <X class="h-5 w-5" />
         </button>
-        <!-- Brand / Logo Area -->
-        <div class="h-32 bg-gradient-to-b from-blue-300/60 to-blue-50/0 flex flex-col justify-center px-6">
-          <div class="flex items-center gap-3">
-            <img :src="Logo" alt="Logo" class="w-10 h-10 object-contain" />
-            <div>
-              <div class="font-bold text-gray-700 text-base leading-tight">Admin Dashboard</div>
-              <div class="text-xs text-gray-500">Breast Cancer Analytics</div>
+
+        <nav class="space-y-3">
+          <router-link
+            v-for="item in menuItems"
+            :key="`mobile-${item.path}`"
+            :to="item.path"
+            @click="isSidebarOpen = false"
+            class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-4"
+            :class="isActive(item.path) ? 'font-semibold bg-[#C2E8FF]' : 'font-medium hover:bg-neutral-50'"
+          >
+            <div class="flex items-center gap-3">
+              <img :src="item.image" :alt="item.name" class="h-8 w-8 object-contain" />
+              <span class="text-neutral-600">{{ item.name }}</span>
             </div>
-          </div>
-        </div>
-        <!-- Navigation Menu -->
-        <nav class="flex-1 px-4 py-8 space-y-4 overflow-y-auto">
-          <router-link v-for="item in menuItems" :key="item.name" :to="item.path" @click="isSidebarOpen = false"
-            class="flex items-center justify-center px-4 py-3.5 rounded-2xl font-bold text-base transition-all duration-200 group relative shadow-sm border bg-white"
-            :class="isActive(item.path)
-              ? 'text-gray-800 border-gray-600 border-2'
-              : 'text-gray-600 border-transparent hover:border-gray-300'">
-            <img :src="item.image" :alt="item.name" class="w-5 h-5 mr-3 object-contain" />
-            {{ item.name }}
+            <span
+              v-if="getBadgeValue(item.badgeKey) > 0"
+              class="inline-flex min-w-7 justify-center rounded-full bg-[#0099ff] px-2 py-1 text-sm font-bold text-white"
+            >
+              {{ getBadgeValue(item.badgeKey) }}
+            </span>
           </router-link>
         </nav>
-        <!-- Action Buttons -->
-        <div class="px-4 pb-8 pt-4 space-y-3 mb-4">
-          <!-- Change Password -->
-          <button @click="() => { handleChangePassword(); isSidebarOpen = false; }"
-            class="flex items-center justify-center px-4 py-3.5 rounded-2xl bg-white text-[#0099ff] font-bold transition-all duration-200 w-full cursor-pointer hover:shadow-md shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mr-3">
-              <path fill-rule="evenodd"
-                d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z"
-                clip-rule="evenodd" />
-            </svg>
-            Change Password
-          </button>
-          <!-- Log Out -->
-          <button @click="() => { handleLogoutClick(); isSidebarOpen = false; }"
-            class="flex items-center justify-center px-4 py-3.5 rounded-2xl bg-white text-red-600 font-bold transition-all duration-200 w-full cursor-pointer hover:shadow-md shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mr-3">
-              <path fill-rule="evenodd"
-                d="M16.5 3.75a1.5 1.5 0 0 1 1.5 1.5v13.5a1.5 1.5 0 0 1-1.5 1.5h-6a1.5 1.5 0 0 1-1.5-1.5V15a.75.75 0 0 0-1.5 0v3.75a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V5.25a3 3 0 0 0-3-3h-6a3 3 0 0 0-3 3V9A.75.75 0 1 0 9 9V5.25a1.5 1.5 0 0 1 1.5-1.5h6ZM5.78 8.47a.75.75 0 0 0-1.06 0l-3 3a.75.75 0 0 0 0 1.06l3 3a.75.75 0 0 0 1.06-1.06l-1.72-1.72H15a.75.75 0 0 0 0-1.5H4.06l1.72-1.72a.75.75 0 0 0 0-1.06Z"
-                clip-rule="evenodd" />
-            </svg>
-            Log Out
+
+        <div class="mt-auto">
+          <button
+            @click="() => { handleLogoutClick(); isSidebarOpen = false }"
+            :disabled="isLoggingOut"
+            class="cursor-pointer flex w-full items-center gap-2 rounded-xl sm:rounded-2xl border-2 border-neutral-400 bg-white px-5 py-5 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <img src="@/assets/icons/logout-icon.png" alt="Logout Icon" class="h-7 w-7" />
+            <span class="font-semibold text-sm">Log Out</span>
           </button>
         </div>
       </div>
     </div>
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-hidden bg-[#FAFAFA]">
-      <header class="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-        <span class="font-bold">Admin Dashboard</span>
-        <button @click="toggleSidebar" class="text-gray-500 hover:text-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-            stroke="currentColor" class="w-6 h-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
-        </button>
-      </header>
-
-      <div class="flex-1 overflow-auto p-8">
-        <RouterView />
-      </div>
-    </main>
-    <!-- Logout Modal Confirmation -->
-    <BaseModal :isOpen="showLogoutModal" title="Sign Out" @close="showLogoutModal = false" maxWidth="max-w-sm">
-      <div class="text-gray-600 mb-2">
-        Are you sure you want to sign out of the Admin panel?
-      </div>
-
+    <!-- Modal confirmation for logout -->
+    <BaseModal :isOpen="showLogoutModal" title="Sign Out" @close="closeLogoutModal" maxWidth="max-w-sm">
+      <p class="text-neutral-700">Are you sure you want to sign out of the Admin panel?</p>
       <template #footer>
-        <button @click="showLogoutModal = false"
-          class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition-colors">
+        <button
+          @click="closeLogoutModal"
+          :disabled="isLoggingOut"
+          class="cursor-pointer rounded-lg px-4 py-2 text-neutral-600 transition-colors bg-neutral-100 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60"
+        >
           Cancel
         </button>
-        <button @click="confirmLogout"
-          class="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold shadow-sm transition-colors">
-          Yes, Sign Out
+        <button
+          @click="confirmLogout"
+          :disabled="isLoggingOut"
+          class="cursor-pointer rounded-lg bg-red-500 px-4 py-2 font-bold text-white shadow-sm transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+        >
+          {{ isLoggingOut ? 'Signing out...' : 'Yes, Sign Out' }}
         </button>
       </template>
     </BaseModal>
-    <!-- Change Password Modal -->
-    <ModalChangePassword :isOpen="showChangePasswordModal" @close="showChangePasswordModal = false" />
   </div>
 </template>
-
-<style scoped>
-/* Utility to hide on mobile uses standard CSS as fallback */
-</style>

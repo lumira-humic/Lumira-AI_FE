@@ -1,44 +1,68 @@
 import httpClient from "@/lib/httpClient";
+import { unwrapApiData } from "@/lib/apiResponse";
+
+
+const decodeJwtPayload = (token) => {
+  if (!token || typeof token !== "string") {
+    return null;
+  }
+
+  try {
+    const [, encodedPayload] = token.split(".");
+    if (!encodedPayload) {
+      return null;
+    }
+
+    const normalizedBase64 = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(normalizedBase64);
+    return JSON.parse(json);
+  } catch (error) {
+    return null;
+  }
+};
 
 
 const normalizeAuthPayload = (payload) => {
-  const user = payload.user || payload.profile || payload.userDetails || null;
-  const role = payload.role || user?.role || "";
-  const accessToken =
-    payload.accessToken || payload.token || payload.session?.access_token || "";
+  const accessToken = payload?.accessToken || "";
+  const user = payload?.user || null;
+  const jwtPayload = decodeJwtPayload(accessToken);
+  const resolvedRole = user?.role || payload?.role || jwtPayload?.role || "patient";
 
   return {
-    user,
-    session: accessToken ? { access_token: accessToken } : null,
-    role,
-    userDetails: user,
+    accessToken,
+    refreshToken: payload?.refreshToken || "",
+    user: user
+      ? {
+          ...user,
+          role: user.role || resolvedRole,
+        }
+      : {
+          role: resolvedRole,
+        },
+    role: resolvedRole,
   };
 };
 
 export const authService = {
   async login(email, password) {
     const { data } = await httpClient.post("/auth/login", { email, password });
-    return normalizeAuthPayload(data || {});
+    return normalizeAuthPayload(unwrapApiData(data));
   },
 
   async logout() {
-    try {
-      await httpClient.post("/auth/logout");
-    } catch (error) {
-      // Ignore logout API errors to avoid blocking local cleanup.
-    }
-
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
+    await httpClient.post("/auth/logout");
   },
 
-  async getSession() {
-    const { data } = await httpClient.get("/auth/session");
-    return data?.session || null;
+  async refreshAccessToken(refreshToken) {
+    const { data } = await httpClient.post("/auth/refresh-token", {
+      refreshToken,
+    });
+
+    return unwrapApiData(data)?.accessToken || "";
   },
 
   async getUser() {
     const { data } = await httpClient.get("/auth/me");
-    return data?.user || data || null;
+    return unwrapApiData(data) || null;
   },
 };

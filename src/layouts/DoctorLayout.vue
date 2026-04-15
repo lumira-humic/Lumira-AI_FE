@@ -1,363 +1,352 @@
 <script setup>
-import { ref, onMounted } from "vue";
-import { RouterView, useRoute, useRouter } from "vue-router";
+import { computed, onMounted, ref, watch } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
+import { Menu, X } from '@lucide/vue'
 
-import { dataService } from "@/services/dataService.js";
-import { authService } from "@/services/authService";
-import { useAppStore } from "@/stores/appStore";
-import BaseModal from "@/components/common/BaseModal.vue";
-import WaitingIcon from "@/assets/doctor/waiting-for-review.png";
-import AttentionIcon from "@/assets/doctor/need-attention.png";
-import DoneIcon from "@/assets/doctor/done.png";
-import Logo from "@/assets/admin/logo.png";
+import { authService } from '@/services/authService'
+import { dataService } from '@/services/dataService'
+import { useAppStore } from '@/stores/appStore'
+import { useToast } from '@/composables/useToast'
+import BaseModal from '@/components/common/BaseModal.vue'
+import DoctorPaginationControl from '@/components/doctor/DoctorPaginationControl.vue'
+import DoctorChatDock from '@/components/doctor/DoctorChatDock.vue'
+import DashboardIcon from '@/assets/admin/dashboard-sidebar.png'
+import DoneIcon from '@/assets/doctor/done.png'
+import WaitingIcon from '@/assets/doctor/waiting-for-review.png'
+import AttentionIcon from '@/assets/doctor/need-attention.png'
 
 
-const route = useRoute();
-const router = useRouter();
-const appStore = useAppStore();
-const showLogoutModal = ref(false);
-const isSidebarOpen = ref(false);
-const stats = ref({ total: 0, pending: 0, completed: 0, attention: 0 });
+const route = useRoute()
+const router = useRouter()
+const appStore = useAppStore()
+const toast = useToast()
 
-const menuItems = ref([
-  {
-    name: "Dashboard",
-    path: "/doctor/dashboard",
-    type: "svg",
-    iconPath: "grid",
-    count: 0,
+const showLogoutModal = ref(false)
+const isSidebarOpen = ref(false)
+const isLoggingOut = ref(false)
+const sidebarStats = ref({
+  total: 0,
+  pending: 0,
+  completed: 0,
+  attention: 0,
+})
+const paginationState = ref({
+  page: 1,
+  limit: 10,
+  totalItems: 0,
+  totalPages: 1,
+  from: 0,
+  to: 0,
+})
+
+const menuItems = [
+  { 
+    name: 'Dashboard', 
+    path: '/doctor/dashboard', 
+    iconPath: DashboardIcon,
   },
   {
-    name: "Waiting For Review",
-    path: "/doctor/dashboard?filter=Not Yet",
-    type: "img",
+    name: 'Waiting For Review',
+    path: '/doctor/dashboard?filter=Not Yet',
     iconPath: WaitingIcon,
-    count: 0,
+    countKey: 'pending',
   },
   {
-    name: "Done",
-    path: "/doctor/dashboard?filter=Done",
-    type: "img",
+    name: 'Completed',
+    path: '/doctor/dashboard?filter=Done',
     iconPath: DoneIcon,
-    count: 0,
+    countKey: 'completed',
   },
   {
-    name: "Need Attention",
-    path: "/doctor/dashboard?filter=Attention",
-    type: "img",
+    name: 'Need Attention',
+    path: '/doctor/dashboard?filter=Attention',
     iconPath: AttentionIcon,
-    count: 0,
+    countKey: 'attention',
   },
-]);
+]
 
-onMounted(async () => {
-  try {
-    const data = await dataService.getDoctorStats();
-    stats.value = data;
+const showBottomDock = computed(() => route.name === 'doctor-dashboard')
 
-    // Update menu items with counts
-    const pendingItem = menuItems.value.find(
-      (i) => i.name === "Waiting For Review"
-    );
-    if (pendingItem) pendingItem.count = data.pending;
-
-    const completedItem = menuItems.value.find((i) => i.name === "Done");
-    if (completedItem) completedItem.count = data.completed;
-
-    const attentionItem = menuItems.value.find(
-      (i) => i.name === "Need Attention"
-    );
-    if (attentionItem) attentionItem.count = data.attention;
-  } catch (error) {
-    console.error("Layout stats fetch failed:", error);
+const headerTitle = computed(() => {
+  if (route.name === 'review-console') {
+    return 'Review Console'
   }
-});
 
-// ACTIVE STATE LOGIC
+  const filter = route.query.filter || ''
+  if (filter === 'Not Yet') {
+    return 'Waiting For Review'
+  }
+
+  if (filter === 'Done') {
+    return 'Completed Inspection'
+  }
+
+  if (filter === 'Attention') {
+    return 'Need Attention'
+  }
+
+  const fallbackName = appStore.profile?.name || '-'
+  return `Welcome ${fallbackName}!`
+})
+
 const isActive = (item) => {
-  if (item.path.includes("?")) {
-    const itemFilter = item.path.split("=")[1];
-    return route.query.filter === itemFilter;
+  if (item.path.includes('?')) {
+    const itemFilter = item.path.split('=')[1]
+    return route.path === '/doctor/dashboard' && route.query.filter === itemFilter
   }
-  if (item.path === "/doctor/dashboard") {
-    return route.path === "/doctor/dashboard" && !route.query.filter;
-  }
-  return route.path.startsWith(item.path);
-};
+
+  return route.path === '/doctor/dashboard' && !route.query.filter
+}
 
 const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value;
-};
+  isSidebarOpen.value = !isSidebarOpen.value
+}
 
 const handleLogoutClick = () => {
-  showLogoutModal.value = true;
-};
-
-const confirmLogout = async () => {
-  try {
-    await authService.logout();
-  } catch (error) {
-    console.error("Logout failed:", error);
+  if (isLoggingOut.value) {
+    return
   }
 
-  appStore.clearSession();
-  showLogoutModal.value = false;
-  router.push("/");
-};
+  showLogoutModal.value = true
+}
+
+const closeLogoutModal = () => {
+  if (isLoggingOut.value) {
+    return
+  }
+
+  showLogoutModal.value = false
+}
+
+const getBadgeValue = (countKey) => {
+  if (!countKey) {
+    return 0
+  }
+
+  return Number(sidebarStats.value[countKey] || 0)
+}
+
+const refreshSidebarStats = async () => {
+  try {
+    sidebarStats.value = await dataService.getDoctorStats()
+  } catch (error) {
+    console.error('Layout stats fetch failed:', error)
+  }
+}
+
+const handlePaginationMeta = (meta) => {
+  paginationState.value = {
+    ...paginationState.value,
+    ...meta,
+  }
+
+  if (paginationState.value.page > paginationState.value.totalPages) {
+    paginationState.value.page = paginationState.value.totalPages || 1
+  }
+}
+
+const handlePageUpdate = (nextPage) => {
+  paginationState.value.page = nextPage
+}
+
+const handleLimitUpdate = (nextLimit) => {
+  paginationState.value.limit = nextLimit
+  paginationState.value.page = 1
+}
+
+const confirmLogout = async () => {
+  if (isLoggingOut.value) {
+    return
+  }
+
+  isLoggingOut.value = true
+
+  try {
+    await authService.logout()
+  } catch (error) {
+    console.error('Logout failed:', error)
+  }
+
+  appStore.clearSession()
+  toast.success('Logout berhasil')
+  showLogoutModal.value = false
+  isSidebarOpen.value = false
+  isLoggingOut.value = false
+  router.push('/')
+}
+
+onMounted(() => {
+  refreshSidebarStats()
+})
+
+watch(
+  () => route.fullPath,
+  () => {
+    if (showBottomDock.value) {
+      paginationState.value.page = 1
+    }
+  },
+)
 </script>
 
 <template>
-  <div class="flex h-screen bg-[#FAFAFA] font-sans text-gray-800">
-    <!-- Sidebar -->
-    <aside
-      class="w-72 flex flex-col bg-[#EDEDED] flex-shrink-0 transition-all duration-300 hidden lg:flex m-4 rounded-3xl h-[calc(100vh-2rem)] shadow-sm relative"
-    >
-      <!-- 1. Redesigned Header -->
-      <div
-        class="h-32 bg-[#BCE3FD] rounded-t-3xl flex flex-col justify-center px-8 relative overflow-hidden"
-      >
-        <div class="flex items-start gap-3 z-10">
-          <img :src="Logo" alt="Logo" class="w-8 h-8 object-contain mt-1" />
+  <div class="min-h-screen bg-[#F2F2F2]">
+    <!-- Header -->
+    <header class="bg-linear-to-r from-[#97D2F8] to-[#A8D8F6] rounded-b-[50px] px-3 sm:px-5 py-3 sm:py-4">
+      <div class="grid grid-cols-3 items-center">
+        <div class="flex col-span-3 lg:col-span-1 items-center gap-3 sm:gap-4">
+          <div class="h-14 w-14 rounded-full bg-white/95 shrink-0"></div>
           <div>
-            <h1 class="font-bold text-gray-600 text-lg leading-tight">
-              Doctor Dashboard
-            </h1>
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5">
-              Breast Cancer Analytics
-            </p>
+            <p class="text-base font-semibold text-neutral-700">{{ appStore.profile?.name || '-' }}</p>
+            <p class="text-xs text-neutral-600">Breast Cancer Analytics</p>
           </div>
         </div>
-      </div>
-      <!-- 2. Navigation "Cards" -->
-      <nav class="flex-1 px-6 py-8 space-y-5 overflow-y-auto">
-        <router-link
-          v-for="item in menuItems"
-          :key="item.name"
-          :to="item.path"
-          class="flex items-center justify-between px-4 py-4 rounded-xl font-bold text-sm transition-all duration-200 group relative shadow-sm border bg-white hover:shadow-md"
-          :class="
-            isActive(item)
-              ? 'border-gray-800 ring-1 ring-gray-800'
-              : 'border-transparent'
-          "
-        >
-          <div class="flex items-center">
-            <span class="w-6 h-6 mr-4 flex items-center justify-center">
-              <!-- SVG Icon -->
-              <svg
-                v-if="item.type === 'svg' && item.iconPath === 'grid'"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-                class="w-5 h-5 text-gray-600"
-              >
-                <path
-                  d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z"
-                />
-              </svg>
-              <!-- PNG Icon -->
-              <img
-                v-else
-                :src="item.iconPath"
-                class="w-full h-full object-contain"
-              />
-            </span>
-            <span
-              class="text-gray-600"
-              :class="{ 'font-bold text-gray-800': isActive(item) }"
-            >
-              {{ item.name }}
-            </span>
-          </div>
-
-          <!-- Badge -->
-          <span
-            v-if="item.count > 0"
-            class="px-2 py-0.5 rounded-full text-xs font-bold"
-            :class="{
-              'bg-red-100 text-red-600':
-                item.name === 'Waiting For Review' ||
-                item.name === 'Need Attention',
-              'bg-blue-100 text-blue-600': item.name === 'Done',
-              'bg-gray-200 text-gray-700': item.name === 'Dashboard',
-            }"
-          >
-            {{ item.count }}
-          </span>
-        </router-link>
-      </nav>
-      <!-- 3. Bottom Logout -->
-      <div class="px-6 pb-8 pt-4 mb-2">
-        <button
-          @click="handleLogoutClick"
-          class="flex items-center justify-center px-4 py-4 rounded-xl bg-white text-red-600 font-bold text-sm transition-all duration-200 w-full cursor-pointer hover:shadow-md shadow-sm border border-transparent hover:border-red-100"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            class="w-5 h-5 mr-3"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M12 2.25a.75.75 0 01.75.75v9a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM6.166 5.106a.75.75 0 010 1.06 8.25 8.25 0 1011.668 0 .75.75 0 111.06-1.06 9.75 9.75 0 11-13.788 0 .75.75 0 011.06 0z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          Log Out
-        </button>
-      </div>
-    </aside>
-    <!-- Mobile Drawer (Mirrors the Sidebar Design) -->
-    <div v-if="isSidebarOpen" class="fixed inset-0 z-50 lg:hidden flex">
-      <div
-        class="fixed inset-0 bg-black/50 transition-opacity"
-        @click="isSidebarOpen = false"
-      ></div>
-      <div class="relative w-72 flex flex-col bg-[#EDEDED] h-full shadow-xl">
-        <div
-          class="h-32 bg-[#BCE3FD] flex flex-col justify-center px-8 relative"
-        >
-          <div class="flex items-start gap-3">
-            <img :src="Logo" alt="Logo" class="w-8 h-8 object-contain mt-1" />
-            <div>
-              <h1 class="font-bold text-gray-600 text-lg leading-tight">
-                Doctor Dashboard
-              </h1>
-              <p
-                class="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5"
-              >
-                Breast Cancer Analytics
-              </p>
-            </div>
-          </div>
+        <div class="hidden lg:flex lg:col-span-1 justify-center">
+          <p class="text-lg font-semibold text-neutral-600">{{ headerTitle }}</p>
         </div>
-        <nav class="flex-1 px-6 py-8 space-y-5 overflow-y-auto">
+      </div>
+    </header>
+    <!-- Main Content -->
+    <div class="flex gap-8 p-3 sm:px-5 pt-6 sm:pt-10">
+      <!-- Left Sidebar/Content -->
+      <aside class="hidden lg:flex w-64 shrink-0 flex-col">
+        <nav class="space-y-3">
           <router-link
             v-for="item in menuItems"
-            :key="item.name"
+            :key="item.path"
             :to="item.path"
-            @click="isSidebarOpen = false"
-            class="flex items-center justify-between px-4 py-4 rounded-xl font-bold text-sm bg-white shadow-sm hover:shadow-md"
-            :class="isActive(item) ? 'ring-1 ring-gray-800' : ''"
+            class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-6 transition-colors"
+            :class="isActive(item) ? 'font-semibold bg-[#C2E8FF]' : 'font-medium hover:bg-neutral-50'"
           >
-            <div class="flex items-center">
-              <span class="w-6 h-6 mr-4 flex items-center justify-center">
-                <svg
-                  v-if="item.type === 'svg'"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                  class="w-5 h-5 text-gray-600"
-                >
-                  <path
-                    d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z"
-                  />
-                </svg>
-                <img
-                  v-else
-                  :src="item.iconPath"
-                  class="w-full h-full object-contain"
-                />
+            <div class="flex items-center gap-3">
+              <span class="h-8 w-8 flex items-center justify-center">
+                <img :src="item.iconPath" :alt="item.name" class="h-8 w-8 object-contain" />
               </span>
-              <span class="text-gray-600">{{ item.name }}</span>
+              <span class="font-semibold text-neutral-600">{{ item.name }}</span>
             </div>
-
-            <!-- Badge Mobile -->
             <span
-              v-if="item.count > 0"
-              class="px-2 py-0.5 rounded-full text-xs font-bold"
-              :class="{
-                'bg-red-100 text-red-600':
-                  item.name === 'Waiting For Review' ||
-                  item.name === 'Need Attention',
-                'bg-blue-100 text-blue-600': item.name === 'Done',
-                'bg-gray-200 text-gray-700': item.name === 'Dashboard',
-              }"
+              v-if="getBadgeValue(item.countKey) > 0"
+              class="inline-flex min-w-7 justify-center rounded-full bg-[#0099ff] px-2 py-1 text-sm font-bold text-white"
             >
-              {{ item.count }}
+              {{ getBadgeValue(item.countKey) }}
             </span>
           </router-link>
         </nav>
-        <div class="px-6 pb-8 pt-4 mb-2">
+        <div class="mt-auto pt-4">
           <button
-            @click="
-              () => {
-                handleLogoutClick();
-                isSidebarOpen = false;
-              }
-            "
-            class="flex items-center justify-center px-4 py-4 rounded-xl bg-white text-red-600 font-bold text-sm w-full shadow-sm"
+            @click="handleLogoutClick"
+            :disabled="isLoggingOut"
+            class="cursor-pointer flex w-full items-center gap-3 rounded-2xl border-2 border-neutral-400 bg-white px-5 py-5 text-left text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Log Out
+            <img src="@/assets/icons/logout-icon.png" alt="Logout Icon" class="h-7 w-7" />
+            <span class="font-semibold">Log Out</span>
+          </button>
+        </div>
+      </aside>
+      <!-- Main Data -->
+      <main class="min-w-0 flex-1">
+        <!-- Header -->
+        <header class="mb-4 flex items-center justify-between lg:hidden">
+          <p class="text-lg font-bold text-neutral-700">Doctor Dashboard</p>
+          <button @click="toggleSidebar" class="cursor-pointer rounded-lg border border-neutral-300 bg-white p-2 text-neutral-600">
+            <Menu class="h-5 w-5" />
+          </button>
+        </header>
+        <!-- Main Content -->
+        <div class="flex h-[calc(100vh-9rem)] flex-col">
+          <div class="min-h-0 flex-1 overflow-hidden rounded-2xl">
+            <RouterView v-slot="{ Component }">
+              <component
+                :is="Component"
+                v-bind="showBottomDock ? { page: paginationState.page, limit: paginationState.limit } : {}"
+                @pagination-meta="handlePaginationMeta"
+              />
+            </RouterView>
+          </div>
+          <!-- Pagination & Chat Dock  -->
+          <div
+            v-if="showBottomDock"
+            class="mt-4 flex flex-col gap-3 lg:flex-row lg:justify-between"
+          >
+            <DoctorPaginationControl
+              :current-page="paginationState.page"
+              :total-pages="paginationState.totalPages"
+              :total-items="paginationState.totalItems"
+              :page-size="paginationState.limit"
+              @update:page="handlePageUpdate"
+              @update:limit="handleLimitUpdate"
+            />
+            <DoctorChatDock />
+          </div>
+        </div>
+      </main>
+    </div>
+    <!-- Right Sidebar/Content If tobe small screen -->
+    <div v-if="isSidebarOpen" class="fixed inset-0 z-50 flex lg:hidden">
+      <div class="absolute inset-0 bg-black/40" @click="isSidebarOpen = false"></div>
+      <div class="relative ml-auto flex h-full w-72 flex-col bg-[#F2F2F2] p-4">
+        <button
+          @click="isSidebarOpen = false"
+          class="cursor-pointer mb-4 ml-auto rounded-lg border border-neutral-300 bg-white p-2 text-neutral-600"
+        >
+          <X class="h-5 w-5" />
+        </button>
+
+        <nav class="space-y-3">
+          <router-link
+            v-for="item in menuItems"
+            :key="`mobile-${item.path}`"
+            :to="item.path"
+            @click="isSidebarOpen = false"
+            class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-4"
+            :class="isActive(item) ? 'font-semibold bg-[#C2E8FF]' : 'font-medium hover:bg-neutral-50'"
+          >
+            <div class="flex items-center gap-3">
+              <span class="h-8 w-8 flex items-center justify-center">
+                <img :src="item.iconPath" :alt="item.name" class="h-8 w-8 object-contain" />
+              </span>
+              <span class="text-neutral-600">{{ item.name }}</span>
+            </div>
+            <span
+              v-if="getBadgeValue(item.countKey) > 0"
+              class="inline-flex min-w-7 justify-center rounded-full bg-[#0099ff] px-2 py-1 text-sm font-bold text-white"
+            >
+              {{ getBadgeValue(item.countKey) }}
+            </span>
+          </router-link>
+        </nav>
+
+        <div class="mt-auto">
+          <button
+            @click="() => { handleLogoutClick(); isSidebarOpen = false }"
+            :disabled="isLoggingOut"
+            class="cursor-pointer flex w-full items-center gap-3 rounded-2xl border-2 border-[#A8A8A8] bg-red-50 px-5 py-5 text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <img src="@/assets/icons/logout-icon.png" alt="Logout Icon" class="h-7 w-7" />
+            <span class="font-semibold">Log Out</span>
           </button>
         </div>
       </div>
     </div>
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-hidden bg-[#FAFAFA]">
-      <header
-        class="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between"
-      >
-        <span class="font-bold text-gray-700">Doctor Panel</span>
-        <button @click="toggleSidebar" class="text-gray-500">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-6 h-6"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-            />
-          </svg>
-        </button>
-      </header>
-      <div class="flex-1 overflow-auto p-4 lg:p-12">
-        <RouterView />
-      </div>
-    </main>
-    <!-- Logout Modal Confirmation -->
-    <BaseModal
-      :isOpen="showLogoutModal"
-      title="Sign Out"
-      @close="showLogoutModal = false"
-      maxWidth="max-w-sm"
-    >
-      <div class="text-gray-600 mb-2">Are you sure you want to sign out?</div>
+    <!-- Modal confirmation for logout -->
+    <BaseModal :isOpen="showLogoutModal" title="Sign Out" @close="closeLogoutModal" maxWidth="max-w-sm">
+      <p class="text-neutral-700">Are you sure you want to sign out?</p>
       <template #footer>
         <button
-          @click="showLogoutModal = false"
-          class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium"
+          @click="closeLogoutModal"
+          :disabled="isLoggingOut"
+          class="cursor-pointer rounded-lg px-4 py-2 text-neutral-600 transition-colors bg-neutral-100 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
           Cancel
         </button>
         <button
           @click="confirmLogout"
-          class="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold"
+          :disabled="isLoggingOut"
+          class="cursor-pointer rounded-lg bg-red-500 px-4 py-2 font-bold text-white shadow-sm transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-red-300"
         >
-          Yes, Sign Out
+          {{ isLoggingOut ? 'Signing out...' : 'Yes, Sign Out' }}
         </button>
       </template>
     </BaseModal>
   </div>
 </template>
-
-<style scoped>
-aside nav::-webkit-scrollbar {
-  width: 4px;
-}
-
-aside nav::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-aside nav::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-}
-</style>
