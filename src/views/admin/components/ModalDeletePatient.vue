@@ -1,39 +1,68 @@
 <script setup>
+import { ref, watch } from 'vue';
 import BaseModal from '@/components/common/BaseModal.vue';
 
-
-defineProps({
+const props = defineProps({
     isOpen: Boolean,
     patient: Object
-})
+});
 
-defineEmits(['close', 'confirm'])
+const emit = defineEmits(['close', 'confirm']);
+
+const isLoading = ref(false);
+
+watch(() => props.isOpen, (val) => {
+    if (val) isLoading.value = false;
+});
+
+const handleConfirm = () => {
+    isLoading.value = true;
+    emit('confirm');
+};
 </script>
 
 <template>
-    <BaseModal :isOpen="isOpen" title="Delete Patient" maxWidth="max-w-sm" @close="$emit('close')">
-        <div class="text-center">
-            <div class="bg-red-100 text-red-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                    stroke="currentColor" class="w-8 h-8">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                </svg>
-            </div>
-            <p class="text-gray-600 mb-1">Are you sure you want to delete</p>
-            <p class="font-bold text-gray-800 text-lg mb-4">{{ patient?.name || 'this patient' }}?</p>
-            <p class="text-sm text-gray-400">This action cannot be undone.</p>
-        </div>
+  <BaseModal 
+    :isOpen="isOpen" 
+    title="" 
+    maxWidth="max-w-[450px]" 
+    @close="$emit('close')" 
+    :showCloseButton="false" 
+    :closeOnBackdrop="!isLoading" 
+    :centerTitle="true"
+  >
+    <div class="flex flex-col items-center justify-center pt-6 pb-2 px-2">
+      <h2 class="text-[26px] font-semibold text-gray-600 mb-10 text-center tracking-normal">
+        Are You Sure Want To Delete?
+      </h2>
+      
+      <div class="flex flex-row justify-center gap-5 w-full px-4">
+        <button 
+          @click="$emit('close')"
+          :disabled="isLoading"
+          class="flex-1 max-w-[160px] cursor-pointer py-3 bg-[#0099ff] hover:bg-blue-600 text-white rounded-full text-lg font-medium shadow-sm transition-colors disabled:opacity-60"
+        >
+          Keep
+        </button>
+        <button 
+          @click="handleConfirm"
+          :disabled="isLoading"
+          class="flex-1 max-w-[160px] cursor-pointer py-3 bg-[#e60000] hover:bg-red-700 text-white rounded-full text-lg font-medium shadow-sm transition-colors disabled:opacity-60 flex items-center justify-center"
+        >
+          <span v-if="isLoading" class="animate-spin mr-2 inline-block align-middle">
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+          </span>
+          <span v-else>Delete</span>
+        </button>
+      </div>
+    </div>
 
-        <template #footer>
-            <button @click="$emit('close')"
-                class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium">
-                Cancel
-            </button>
-            <button @click="$emit('confirm')"
-                class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium shadow-sm hover:shadow">
-                Delete
-            </button>
-        </template>
-    </BaseModal>
+    <!-- Hiding default footer -->
+    <template #footer>
+      <div class="hidden"></div>
+    </template>
+  </BaseModal>
 </template>

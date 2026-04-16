@@ -83,7 +83,7 @@ const handleStartNow = () => {
         </div>
       </div>
     </section>
-    <!-- How It Works Section (Lower Z-Index) -->
+    <!-- How It Work Section (Lower Z-Index) -->
     <section id="how-it-works" class="relative py-26 bg-linear-to-b from-[#4CBBFF] to-[#E2F4FF] z-10 mt-8">
       <div class="max-w-300 mx-auto px-8">
         <!-- Header -->

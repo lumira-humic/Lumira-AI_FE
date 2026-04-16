@@ -39,8 +39,8 @@ const fetchPatients = async () => {
   isLoading.value = true;
   errorMessage.value = "";
   try {
-    const patients = await dataService.getPatients();
-    patientList.value = patients;
+    const patients = await dataService.getPatients({ limit: 100 });
+    patientList.value = patients.map((p, idx) => ({ ...p, pseudoId: `P${idx + 1}` }));
   } catch (error) {
     console.error("Error fetching data:", error);
     patientList.value = [];
@@ -58,7 +58,7 @@ const filteredPatients = computed(() => {
     (p) =>
       String(p.name || "").toLowerCase().includes(lowerQuery) ||
       String(p.email || "").toLowerCase().includes(lowerQuery) ||
-      String(p.id || "").toLowerCase().includes(lowerQuery) ||
+      String(p.pseudoId || "").toLowerCase().includes(lowerQuery) ||
       String(p.phone || "").toLowerCase().includes(lowerQuery),
   );
 });
@@ -113,9 +113,7 @@ const openUploadModal = (patient) => {
 
 const handleAddPatient = async (newPatient) => {
   try {
-    const createdPatient = await dataService.addPatient(newPatient);
-
-    if (newPatient.rawFile && createdPatient?.id) {
+    if (newPatient.rawFile && newPatient.id) {
       isAddModalOpen.value = false;
       isAnalyzing.value = true;
 
@@ -149,8 +147,6 @@ const handleAddPatient = async (newPatient) => {
 
 const handleEditPatient = async (updatedPatient) => {
   try {
-    await dataService.updatePatient(selectedPatient.value.id, updatedPatient);
-
     if (updatedPatient.rawFile) {
       isEditModalOpen.value = false;
       isAnalyzing.value = true;
@@ -319,63 +315,62 @@ const handleReAnalysis = async () => {
             <div class="col-span-1 flex items-center justify-center">
               <img :src="PatientIcon" alt="Patient" class="h-10 w-10 object-contain" />
             </div>
-            <div class="col-span-1 text-2xl font-semibold text-neutral-600">
-              P{{ String(patient.id || "").padStart(3, "0") }}
+            <div class="col-span-1 text-[15px] xl:text-[17px] font-semibold text-neutral-600">
+              {{ patient.pseudoId }}
             </div>
-            <div class="col-span-1 overflow-hidden text-2xl font-semibold text-neutral-600">
+            <div class="col-span-1 overflow-hidden text-[15px] xl:text-[17px] font-semibold text-neutral-600">
               <div class="truncate" :title="patient.name">
                 {{ patient.name }}
               </div>
             </div>
-            <div class="col-span-1 text-xl font-semibold text-neutral-600">{{ patient.phone || "-" }}</div>
+            <div class="col-span-1 text-[15px] xl:text-[17px] font-semibold text-neutral-600 truncate">{{ patient.phone || "-" }}</div>
             <div class="col-span-1 text-center">
-              <span v-if="patient.image" class="text-2xl font-semibold text-[#2BC11F]">Yes</span>
-              <span v-else class="text-2xl font-semibold text-red-500">No</span>
+              <span v-if="patient.image" class="text-[15px] xl:text-[17px] font-semibold text-[#2BC11F]">Yes</span>
+              <span v-else class="text-[15px] xl:text-[17px] font-semibold text-red-500">No</span>
             </div>
             <div class="col-span-1 text-center">
               <span
                 v-if="patient.review === 'VALIDATED' || patient.review === 'Done'"
-                class="text-2xl font-semibold text-[#2BC11F]"
+                class="text-[15px] xl:text-[17px] font-semibold text-[#2BC11F]"
               >
                 Done
               </span>
               <span
                 v-else-if="patient.review === 'PENDING' || patient.review === 'Not Yet'"
-                class="text-2xl font-semibold text-[#0F79B7]"
+                class="text-[15px] xl:text-[17px] font-semibold text-[#0F79B7]"
               >
                 Not Yet
               </span>
               <span
                 v-else-if="patient.review === 'REJECTED'"
-                class="text-2xl font-semibold text-red-500"
+                class="text-[15px] xl:text-[17px] font-semibold text-red-500"
               >
                 Rejected
               </span>
-              <span v-else class="text-2xl font-semibold text-neutral-400">-</span>
+              <span v-else class="text-[15px] xl:text-[17px] font-semibold text-neutral-400">-</span>
             </div>
             <div class="col-span-1 flex items-center justify-center">
               <div class="flex gap-2">
                 <button
                   @click="openEditModal(patient)"
-                  class="p-2 transition-transform hover:scale-110"
+                  class="group relative p-2 transition-transform hover:scale-110"
                 >
                   <img :src="EditIcon" alt="Edit" class="w-8 h-8" />
+                  <span class="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-2.5 py-1 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100 z-10">
+                    Edit
+                  </span>
                 </button>
                 <button
                   @click="openDeleteModal(patient)"
-                  class="p-2 transition-transform hover:scale-110"
+                  class="group relative p-2 transition-transform hover:scale-110"
                 >
                   <img :src="DeleteIcon" alt="Delete" class="w-8 h-8" />
+                  <span class="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100 z-10">
+                    Delete
+                  </span>
                 </button>
                 <button
-                  v-if="!patient.image"
-                  @click="openUploadModal(patient)"
-                  class="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-600 border border-blue-200"
-                >
-                  + Image
-                </button>
-                <button
-                  v-else
+                  v-if="patient.image"
                   @click="openAIModal(patient)"
                   class="rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-600 border border-green-200"
                 >
