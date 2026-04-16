@@ -1,7 +1,10 @@
 <script setup>
-import { ref, watch } from "vue";
 
+import { ref, watch } from "vue";
 import BaseModal from "@/components/common/BaseModal.vue";
+import ModalChangePassword from "./ModalChangePassword.vue";
+import ModalSavedChanges from "./ModalSavedChanges.vue";
+import { dataService } from "@/services/dataService";
 
 
 const props = defineProps({
@@ -21,6 +24,9 @@ const form = ref({
   status: "Active",
 });
 
+const showChangePasswordModal = ref(false);
+const showSavedChangesModal = ref(false);
+
 // Watch for changes in the doctor prop to update the form
 watch(
   () => props.doctor,
@@ -38,8 +44,32 @@ watch(
   { immediate: true }
 );
 
-const handleSubmit = () => {
-  emit("submit", { ...form.value });
+
+const isLoading = ref(false);
+
+const handleSubmit = async () => {
+  isLoading.value = true;
+  try {
+    // Kirim ke API updateDoctor
+    await dataService.updateDoctor(props.doctor.id, {
+      name: form.value.name,
+      email: form.value.email,
+      status: form.value.status,
+      password: form.value.password || undefined, // hanya jika diubah
+    });
+    emit("submit", { ...form.value });
+    showSavedChangesModal.value = true;
+  } catch (e) {
+    alert("Failed to update doctor!");
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const handleChangePasswordSubmit = (data) => {
+  showChangePasswordModal.value = false;
+  // Set password di form edit doctor
+  form.value.password = data.newPassword;
 };
 </script>
 
@@ -50,7 +80,7 @@ const handleSubmit = () => {
     @close="$emit('close')"
     :showCloseButton="true"
     :centerTitle="true"
-    :closeOnBackdrop="false"
+    :closeOnBackdrop="!showSavedChangesModal && !isLoading"
   >
     <div class="space-y-6 px-2">
       <!-- Name -->
@@ -80,8 +110,19 @@ const handleSubmit = () => {
           v-model="form.password"
           type="password"
           placeholder="(Unchanged)"
-          class="flex-1 px-4 py-2.5 bg-gray-100 rounded-lg outline-none text-gray-700"
+          class="flex-1 px-4 py-2.5 bg-gray-100 rounded-lg outline-none text-gray-700 cursor-not-allowed"
+          readonly
+          tabindex="-1"
         />
+      </div>
+      <!-- Forgot Password Link -->
+      <div class="flex justify-end px-1">
+        <button
+          @click="showChangePasswordModal = true"
+          class="text-sm text-red-500 hover:text-red-600 font-medium"
+        >
+           <span class="text-blue-500 hover:text-blue-600">Change Password</span>
+        </button>
       </div>
       <!-- Status Custom Toggle -->
       <div class="flex items-center gap-4">
@@ -117,9 +158,16 @@ const handleSubmit = () => {
       <div class="pt-4">
         <button
           @click="handleSubmit"
-          class="w-full py-3 bg-[#0099ff] hover:bg-blue-600 text-white rounded-full font-bold text-lg transition-colors shadow-lg shadow-blue-200"
+          :disabled="isLoading"
+          class="w-full py-3 bg-[#0099ff] hover:bg-blue-600 text-white rounded-full font-bold text-lg transition-colors shadow-lg shadow-blue-200 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Save Changes
+          <span v-if="isLoading" class="animate-spin mr-2 inline-block align-middle">
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+          </span>
+          <span>Edit</span>
         </button>
       </div>
     </div>
@@ -129,4 +177,17 @@ const handleSubmit = () => {
       <div class="hidden"></div>
     </template>
   </BaseModal>
+
+  <!-- Change Password Modal -->
+  <ModalChangePassword
+    :isOpen="showChangePasswordModal"
+    @close="showChangePasswordModal = false"
+    @submit="handleChangePasswordSubmit"
+  />
+
+  <!-- Saved Changes Modal -->
+  <ModalSavedChanges
+    :isOpen="showSavedChangesModal"
+    @close="showSavedChangesModal = false"
+  />
 </template>

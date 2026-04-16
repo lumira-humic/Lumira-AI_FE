@@ -36,7 +36,7 @@ const fetchDoctors = async () => {
   errorMessage.value = "";
   try {
     const doctors = await dataService.getDoctors();
-    doctorList.value = doctors;
+    doctorList.value = doctors.map((d, idx) => ({ ...d, pseudoId: `D${idx + 1}` }));
   } catch (error) {
     console.error("Error fetching data:", error);
     doctorList.value = [];
@@ -54,7 +54,7 @@ const filteredDoctors = computed(() => {
     (d) =>
       String(d.name || "").toLowerCase().includes(lowerQuery) ||
       String(d.email || "").toLowerCase().includes(lowerQuery) ||
-      String(d.id || "").toLowerCase().includes(lowerQuery),
+      String(d.pseudoId || "").toLowerCase().includes(lowerQuery),
   );
 });
 
@@ -96,15 +96,13 @@ const openDeleteModal = (doctor) => {
   isDeleteModalOpen.value = true;
 };
 
-const handleAddDoctor = async (newDoctor) => {
+const handleAddDoctor = async () => {
   try {
-    await dataService.addDoctor(newDoctor);
     await fetchDoctors();
     isAddModalOpen.value = false;
     toast.success("Doctor added successfully");
   } catch (error) {
-    console.error("Failed to add doctor:", error);
-    toast.error("Failed to add doctor");
+    console.error("Failed to finish add doctor sequence:", error);
   }
 };
 
@@ -145,7 +143,7 @@ const handleDeleteDoctor = async () => {
         <SearchInput
           v-model="searchQuery"
           :disabled="isLoading || !!errorMessage"
-          placeholder="Search by ID or Name"
+          placeholder="Search"
           wrapperClass="max-w-none"
         />
         <button
@@ -199,35 +197,41 @@ const handleDeleteDoctor = async () => {
             <div class="col-span-1 flex items-center justify-center">
               <img :src="DoctorIcon" alt="Doctor" class="h-10 w-10 object-contain" />
             </div>
-            <div class="col-span-1 text-2xl font-semibold text-neutral-600">
-              D{{ String(doctor.id || "").padStart(3, "0") }}
+            <div class="col-span-1 text-[15px] xl:text-[17px] font-semibold text-neutral-600">
+              {{ doctor.pseudoId }}
             </div>
-            <div class="col-span-1 overflow-hidden text-2xl font-semibold text-neutral-600">
+            <div class="col-span-1 overflow-hidden text-[15px] xl:text-[17px] font-semibold text-neutral-600">
               <div class="truncate" :title="doctor.name">
                 {{ doctor.name }}
               </div>
             </div>
-            <div class="col-span-1 overflow-hidden text-xl font-semibold text-neutral-600">
+            <div class="col-span-1 overflow-hidden text-[15px] xl:text-[17px] font-semibold text-neutral-600">
               <div class="truncate" :title="doctor.email">
                 {{ doctor.email }}
               </div>
             </div>
-            <div class="col-span-1 text-2xl font-semibold text-[#2BC11F]">
+            <div class="col-span-1 text-[15px] xl:text-[17px] font-semibold" :class="doctor.status === 'Active' ? 'text-[#2BC11F]' : 'text-[#0099ff]'">
               {{ doctor.status || "Active" }}
             </div>
             <div class="col-span-1 flex items-center justify-center">
               <div class="flex gap-2">
                 <button
                   @click="openEditModal(doctor)"
-                  class="p-2 transition-transform hover:scale-110"
+                  class="group relative p-2 transition-transform hover:scale-110"
                 >
                   <img :src="EditIcon" alt="Edit" class="w-8 h-8" />
+                  <span class="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-2.5 py-1 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100 z-10">
+                    Edit
+                  </span>
                 </button>
                 <button
                   @click="openDeleteModal(doctor)"
-                  class="p-2 transition-transform hover:scale-110"
+                  class="group relative p-2 transition-transform hover:scale-110"
                 >
                   <img :src="DeleteIcon" alt="Delete" class="w-8 h-8" />
+                  <span class="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100 z-10">
+                    Delete
+                  </span>
                 </button>
               </div>
             </div>

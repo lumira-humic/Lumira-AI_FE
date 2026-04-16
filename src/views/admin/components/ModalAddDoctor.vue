@@ -2,7 +2,8 @@
 import { ref } from "vue";
 
 import BaseModal from "@/components/common/BaseModal.vue";
-
+import ModalSavedChanges from "./ModalSavedChanges.vue";
+import { dataService } from "@/services/dataService";
 
 defineProps({
   isOpen: Boolean,
@@ -17,8 +18,24 @@ const form = ref({
   status: "Active",
 });
 
-const handleSubmit = () => {
-  emit("submit", { ...form.value });
+const isLoading = ref(false);
+const showSavedChangesModal = ref(false);
+
+const handleSubmit = async () => {
+  isLoading.value = true;
+  try {
+    await dataService.addDoctor(form.value);
+    showSavedChangesModal.value = true;
+  } catch(e) {
+    alert("Failed to add doctor!");
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const handleSavedClose = () => {
+  showSavedChangesModal.value = false;
+  emit("submit");
   form.value = { name: "", email: "", password: "", status: "Active" };
 };
 </script>
@@ -30,7 +47,7 @@ const handleSubmit = () => {
     @close="$emit('close')"
     :showCloseButton="true"
     :centerTitle="true"
-    :closeOnBackdrop="false"
+    :closeOnBackdrop="!showSavedChangesModal && !isLoading"
   >
     <div class="space-y-6 px-2">
       <!-- Name -->
@@ -51,6 +68,7 @@ const handleSubmit = () => {
           type="email"
           class="flex-1 px-4 py-2.5 bg-gray-100 rounded-lg outline-none text-gray-700"
           required
+          autocomplete="off"
         />
       </div>
       <!-- Password -->
@@ -61,6 +79,7 @@ const handleSubmit = () => {
           type="password"
           class="flex-1 px-4 py-2.5 bg-gray-100 rounded-lg outline-none text-gray-700"
           required
+          autocomplete="new-password"
         />
       </div>
       <!-- Status Custom Toggle -->
@@ -97,9 +116,16 @@ const handleSubmit = () => {
       <div class="pt-4">
         <button
           @click="handleSubmit"
-          class="w-full py-3 bg-[#0099ff] hover:bg-blue-600 text-white rounded-full font-bold text-lg transition-colors shadow-lg shadow-blue-200"
+          :disabled="isLoading"
+          class="w-full py-3 bg-[#0099ff] hover:bg-blue-600 text-white rounded-full font-bold text-lg transition-colors shadow-lg shadow-blue-200 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Add
+          <span v-if="isLoading" class="animate-spin mr-2 inline-block align-middle">
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+          </span>
+          <span>Add</span>
         </button>
       </div>
     </div>
@@ -108,4 +134,10 @@ const handleSubmit = () => {
       <div class="hidden"></div>
     </template>
   </BaseModal>
+
+  <!-- Saved Changes Modal -->
+  <ModalSavedChanges
+    :isOpen="showSavedChangesModal"
+    @close="handleSavedClose"
+  />
 </template>
