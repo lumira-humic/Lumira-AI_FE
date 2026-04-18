@@ -280,7 +280,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="flex h-full min-h-0 flex-col rounded-2xl px-2 py-2 sm:px-3">
+  <section class="flex h-full min-h-0 flex-col rounded-2xl">
     <!-- Header -->
     <div class="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-center sm:gap-8">
       <div class="flex items-center gap-2 sm:gap-3">
