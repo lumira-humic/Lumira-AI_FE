@@ -10,72 +10,72 @@ const handleStartNow = () => {
   <div class="w-full relative overflow-x-hidden">
     <!-- Hero Section (Highest Z-Index for text visibility) -->
     <section class="relative pt-20 pb-32 bg-linear-to-r from-[#9AD7FD] to-[#C3E8FF] overflow-visible">
-      <!-- Left Side (Text Content) -->
-      <div class="max-w-300 mx-auto px-8 relative grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] items-center">
-        <div class="flex flex-col items-start z-30 bg-linear-to-r from-[#9AD7FD] to-[#e0f3ff5d] rounded-xl">
+      <div class="max-w-378 mx-auto px-6 sm:px-8 xl:px-11 relative grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] items-center">
+        <!-- Left Content -->
+        <div class="flex flex-col items-start lg:ml-26 z-30 bg-linear-to-r from-[#9AD7FD] to-[#e0f3ff5d] rounded-xl">
           <div
             class="inline-flex items-center gap-2 bg-[#0093EE] text-white px-4 py-2 rounded-full font-semibold mb-6">
             <img src="@/assets/icons/eos-icons_ai.svg" alt="AI Hero Icon" class="w-7 h-7 object-contain" />
             <span class="text-base sm:text-lg">Powered By AI</span>
           </div>  
-          <h1 class="text-3xl sm:text-5xl xl:text-6xl font-semibold text-white leading-tight mb-2">
+          <h1 class="text-3xl sm:text-5xl xl:text-[64px] font-semibold text-white leading-tight mb-2">
             Early Detection of <br />
             Breast Cancer with <br />
             AI Technology
           </h1>
-          <p class="text-white text-base sm:text-lg leading-relaxed mb-8">
+          <p class="text-white text-base sm:text-lg xl:text-xl leading-relaxed mb-8">
             An AI-based mammogram analysis system that helps doctors provide more accurate and faster diagnoses for breast cancer treatment.
           </p>
           <button
             @click="handleStartNow"
-            class="bg-[#0093EE] hover:bg-white text-white hover:text-[#0093EE] hover:ring-none ring-2 ring-white px-10 py-3 rounded-xl font-semibold text-lg transition-colors duration-300 cursor-pointer">
+            class="text-base sm:text-xl xl:text-3xl bg-[#0093EE] hover:bg-white text-white hover:text-[#0093EE] hover:ring-none ring-2 ring-white px-10 py-3 rounded-xl font-semibold transition-colors duration-300 cursor-pointer">
             Start Now!
           </button>
         </div>
-        <!-- Placeholder for grid layout -->
+        <!-- Right Content -->
         <div class="hidden lg:block"></div>
-      </div>
-      <!-- Elips Background -->
-      <div class="hidden lg:block absolute top-20 right-0 w-50 z-10 pointer-events-none">
-        <img src="@/assets/icons/elips-half-icon.svg" alt="Half Circle" class="w-full h-auto" />
+        <!-- Elips Background -->
+        <div class="hidden lg:block absolute -top-5 right-0 w-40 z-10 pointer-events-none">
+          <img src="@/assets/icons/elips-half-icon.svg" alt="Half Circle" class="w-full h-auto" />
+        </div>
       </div>
     </section>
     <!-- Key Features Section (Middle Z-Index) -->
-    <section id="features" class="relative py-24 bg-linear-to-r from-[#4CBBFF] to-[#E2F4FF] z-20 mt-8 overflow-visible">
-      <div class="max-w-300 mx-auto px-8 relative z-10">
+    <section id="features" class="relative py-30 bg-linear-to-r from-[#4CBBFF] to-[#E2F4FF] z-20 mt-8 overflow-visible">
+      <div class="max-w-378 mx-auto px-6 sm:px-8 xl:px-11 relative z-10">
         <!-- Doctor Image (Overlaying Hero and Features and How It Works) -->
-        <div class="hidden lg:block absolute bottom-0 right-16 w-150 z-1 pointer-events-none">
+        <div class="hidden lg:block absolute -bottom-38 right-0 w-190 z-1 pointer-events-none">
           <img src="@/assets/images/doctor.png" alt="Doctor" class="w-full h-auto" />
         </div>
         <!-- Header -->
-        <div class="mb-10 text-center relative z-20">
+        <div class="mb-12 text-center relative z-20">
           <h2 class="text-xl sm:text-2xl xl:text-4xl font-semibold text-neutral-800 mb-2">Key Features</h2>
           <p class="text-sm sm:text-lg xl:text-xl text-neutral-700">
             Leading-edge technology for better diagnosis
           </p>
         </div>
         <!-- Cards -->
-        <div class="flex flex-wrap lg:flex-nowrap gap-8 justify-center items-center relative z-20">
+        <div class="flex flex-wrap lg:flex-nowrap gap-6 sm:gap-12 justify-center items-center relative z-20">
           <!-- AI Analysis Card -->
           <div
-            class="group bg-white hover:bg-[#0093EE] border-2 border-neutral-300 hover:border-neutral-100 rounded-xl p-6 w-full max-w-[320px] flex flex-col items-center text-center duration-300">
-            <div class="w-18 h-18">
-              <img src="@/assets/images/ai-vector.png" alt="AI Analysis" class="w-full h-full object-contain group-hover:invert group-hover:brightness-0 group-hover:contrast-200" />
+            class="group bg-white hover:bg-[#0093EE] border-2 border-neutral-300 hover:border-neutral-100 rounded-xl p-4 sm:px-8 sm:py-8 max-w-105 flex flex-col items-center text-center duration-700">
+            <div class="w-16 h-16 sm:w-26 sm:h-26 xl:w-32 xl:h-32">
+              <img src="@/assets/images/ai-vector.png" alt="AI Analysis" class="w-full h-full object-contain group-hover:invert group-hover:brightness-0 group-hover:contrast-700" />
             </div>
-            <h3 class="text-xl sm:text-2xl font-bold text-neutral-700 group-hover:text-white mb-3 sm:mb-4">AI Analysis</h3>
-            <p class="text-neutral-500 group-hover:text-white text-base sm:text-lg leading-relaxed">
+            <h3 class="text-xl sm:text-xl lg:text-4xl font-bold text-neutral-700 group-hover:text-white mb-3 sm:mb-4">AI Analysis</h3>
+            <p class="text-neutral-500 group-hover:text-white text-base lg:text-2xl leading-relaxed">
               Deep learning algorithms analyze ultrasound images with exceptional
               accuracy to aid in early detection.
             </p>
           </div>
           <!-- Doctor Review Card -->
           <div
-            class="group bg-white hover:bg-[#0093EE] border-2 border-neutral-300 hover:border-neutral-200 rounded-xl p-6 w-full max-w-[320px] flex flex-col items-center text-center duration-300">
-            <div class="w-16 h-16 mb-2">
-              <img src="@/assets/images/doctor-vector.png" alt="Doctor Review" class="w-full h-full object-contain group-hover:invert group-hover:brightness-0 group-hover:contrast-200" />
+            class="group bg-white hover:bg-[#0093EE] border-2 border-neutral-300 hover:border-neutral-200 rounded-xl p-4 xl:px-8 xl:py-8 w-full max-w-105 flex flex-col items-center text-center duration-700">
+            <div class="w-14 h-14 sm:w-24 sm:h-24 xl:w-30 xl:h-30 mb-1 sm:mb-4">
+              <img src="@/assets/images/doctor-vector.png" alt="Doctor Review" class="w-full h-full object-contain group-hover:invert group-hover:brightness-0 group-hover:contrast-700" />
             </div>
-            <h3 class="text-xl sm:text-2xl font-bold text-neutral-700 group-hover:text-white mb-3 sm:mb-4">Doctor Review</h3>
-            <p class="text-neutral-500 group-hover:text-white text-base sm:text-lg leading-relaxed">
+            <h3 class="text-xl sm:text-xl lg:text-4xl font-bold text-neutral-700 group-hover:text-white mb-3 sm:mb-4">Doctor Review</h3>
+            <p class="text-neutral-500 group-hover:text-white text-base lg:text-2xl leading-relaxed">
               Every AI insight is strictly reviewed by specialist doctors to
               ensure diagnosis accuracy and safety.
             </p>
@@ -85,7 +85,7 @@ const handleStartNow = () => {
     </section>
     <!-- How It Work Section (Lower Z-Index) -->
     <section id="how-it-works" class="relative py-26 bg-linear-to-b from-[#4CBBFF] to-[#E2F4FF] z-10 mt-8">
-      <div class="max-w-300 mx-auto px-8">
+      <div class="max-w-378 mx-auto px-11">
         <!-- Header -->
         <div class="mb-10 text-center">
           <h2 class="text-xl sm:text-2xl xl:text-4xl font-semibold text-neutral-800 mb-2">How It Works</h2>
@@ -144,7 +144,7 @@ const handleStartNow = () => {
     </section>
     <!-- Why Us Section (Unchanged mostly, just fixing z-index references if needed to be safe) -->
     <section id="why-us" class="relative py-20 bg-white z-30">
-      <div class="max-w-300 mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div class="max-w-378 mx-auto px-6 sm:px-8 xl:px-11 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <!-- List Content -->
         <div>
           <h2 class="text-xl sm:text-2xl xl:text-4xl text-center font-semibold text-neutral-800 mb-8">Why Choose Us?</h2>
