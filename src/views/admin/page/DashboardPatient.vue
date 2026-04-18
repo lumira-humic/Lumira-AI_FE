@@ -260,12 +260,12 @@ const handleReAnalysis = async () => {
         <SearchInput
           v-model="searchQuery"
           :disabled="isLoading || !!errorMessage"
-          placeholder="Search"
+          placeholder="Search by ID or Name"
           wrapperClass="max-w-none"
         />
         <button
           @click="openAddModal"
-          class="w-full sm:w-fit cursor-pointer whitespace-nowrap rounded-lg bg-[#0D99FF] px-6 py-2.5 text-base sm:text-xl font-semibold text-white transition-colors hover:bg-[#058ee3]"
+          class="w-full sm:w-fit cursor-pointer whitespace-nowrap rounded-xl bg-[#0D99FF] px-6 py-2.5 text-base sm:text-xl font-semibold text-white transition-colors hover:bg-[#058ee3]"
         >
           Add Patient
         </button>
@@ -353,7 +353,7 @@ const handleReAnalysis = async () => {
               <div class="flex gap-2">
                 <button
                   @click="openEditModal(patient)"
-                  class="group relative p-2 transition-transform hover:scale-110"
+                  class="cursor-pointer group relative p-2 transition-transform hover:scale-110"
                 >
                   <img :src="EditIcon" alt="Edit" class="w-8 h-8" />
                   <span class="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-2.5 py-1 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100 z-10">
@@ -362,7 +362,7 @@ const handleReAnalysis = async () => {
                 </button>
                 <button
                   @click="openDeleteModal(patient)"
-                  class="group relative p-2 transition-transform hover:scale-110"
+                  class="cursor-pointer group relative p-2 transition-transform hover:scale-110"
                 >
                   <img :src="DeleteIcon" alt="Delete" class="w-8 h-8" />
                   <span class="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100 z-10">

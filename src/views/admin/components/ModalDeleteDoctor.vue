@@ -1,10 +1,12 @@
 <script setup>
 import { ref, watch } from 'vue';
+
 import BaseModal from '@/components/common/BaseModal.vue';
 
+
 const props = defineProps({
-    isOpen: Boolean,
-    doctor: Object
+  isOpen: Boolean,
+  doctor: Object
 });
 
 const emit = defineEmits(['close', 'confirm']);
@@ -12,12 +14,12 @@ const emit = defineEmits(['close', 'confirm']);
 const isLoading = ref(false);
 
 watch(() => props.isOpen, (val) => {
-    if (val) isLoading.value = false;
+  if (val) isLoading.value = false;
 });
 
 const handleConfirm = () => {
-    isLoading.value = true;
-    emit('confirm');
+  isLoading.value = true;
+  emit('confirm');
 };
 </script>
 
@@ -28,7 +30,7 @@ const handleConfirm = () => {
     maxWidth="max-w-[450px]" 
     @close="$emit('close')" 
     :showCloseButton="false" 
-    :closeOnBackdrop="!isLoading" 
+    :closeOnBackdrop="false" 
     :centerTitle="true"
   >
     <div class="flex flex-col items-center justify-center pt-6 pb-2 px-2">
@@ -40,14 +42,14 @@ const handleConfirm = () => {
         <button 
           @click="$emit('close')"
           :disabled="isLoading"
-          class="flex-1 max-w-[160px] cursor-pointer py-3 bg-[#0099ff] hover:bg-blue-600 text-white rounded-full text-lg font-medium shadow-sm transition-colors disabled:opacity-60"
+          class="flex-1 max-w-40 cursor-pointer py-3 bg-[#0099ff] hover:bg-blue-600 text-white rounded-full text-lg font-medium shadow-sm transition-colors disabled:opacity-60"
         >
           Keep
         </button>
         <button 
           @click="handleConfirm"
           :disabled="isLoading"
-          class="flex-1 max-w-[160px] cursor-pointer py-3 bg-[#e60000] hover:bg-red-700 text-white rounded-full text-lg font-medium shadow-sm transition-colors disabled:opacity-60 flex items-center justify-center"
+          class="flex-1 max-w-40 cursor-pointer py-3 bg-[#e60000] hover:bg-red-700 text-white rounded-full text-lg font-medium shadow-sm transition-colors disabled:opacity-60 flex items-center justify-center"
         >
           <span v-if="isLoading" class="animate-spin mr-2 inline-block align-middle">
             <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
