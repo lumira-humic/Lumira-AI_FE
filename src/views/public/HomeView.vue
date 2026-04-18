@@ -149,32 +149,32 @@ const handleStartNow = () => {
         <div>
           <h2 class="text-xl sm:text-2xl xl:text-4xl text-center font-semibold text-neutral-800 mb-8">Why Choose Us?</h2>
           <ul class="space-y-8">
-            <li class="flex gap-4">
-              <div class="w-4 h-4 sm:h-6 sm:w-6 bg-[#0093EE] rounded-full mt-1.5"></div>
-              <div>
-                <strong class="block text-xl sm:text-2xl text-neutral-700 mb-2">More Accurate Early Detection</strong>
-                <p class="text-neutral-600 text-base sm:text-lg">
-                  AI helps detect signs of cancer that the human eye might miss
-                </p>
+            <li class="flex flex-col gap-2">
+              <div class="flex items-center gap-4">
+                <div class="w-4 h-4 sm:h-6 sm:w-6 bg-[#0093EE] rounded-full"></div>
+                <strong class="block text-xl sm:text-2xl text-neutral-700">More Accurate Early Detection</strong>
               </div>
+              <p class="text-neutral-600 text-base sm:text-lg">
+                AI helps detect signs of cancer that the human eye might miss
+              </p>
             </li>
-            <li class="flex gap-4">
-              <div class="w-4 h-4 sm:h-6 sm:w-6 bg-[#0093EE] rounded-full mt-1.5"></div>
-              <div>
-                <strong class="block text-xl sm:text-2xl text-neutral-700 mb-2">Faster Diagnosis</strong>
-                <p class="text-neutral-600 text-base sm:text-lg">
-                  Automated analysis saves time for faster treatment
-                </p>
+            <li class="flex flex-col gap-2">
+              <div class="flex items-center gap-4">
+                <div class="w-4 h-4 sm:h-6 sm:w-6 bg-[#0093EE] rounded-full"></div>
+                <strong class="block text-xl sm:text-2xl text-neutral-700">Faster Diagnosis</strong>
               </div>
+              <p class="text-neutral-600 text-base sm:text-lg">
+                Automated analysis saves time for faster treatment
+              </p>
             </li>
-            <li class="flex gap-4">
-              <div class="w-4 h-4 sm:h-6 sm:w-6 bg-[#0093EE] rounded-full mt-1.5"></div>
-              <div>
-                <strong class="block text-xl sm:text-2xl text-neutral-700 mb-2">Doctor & AI Collaboration</strong>
-                <p class="text-neutral-600 text-base sm:text-lg">
-                  Combining doctor expertise and AI intelligence for optimal results
-                </p>
+            <li class="flex flex-col gap-2">
+              <div class="flex items-center gap-4">
+                <div class="w-4 h-4 sm:h-6 sm:w-6 bg-[#0093EE] rounded-full"></div>
+                <strong class="block text-xl sm:text-2xl text-neutral-700">Doctor & AI Collaboration</strong>
               </div>
+              <p class="text-neutral-600 text-base sm:text-lg">
+                Combining doctor expertise and AI intelligence for optimal results
+              </p>
             </li>
           </ul>
         </div>
