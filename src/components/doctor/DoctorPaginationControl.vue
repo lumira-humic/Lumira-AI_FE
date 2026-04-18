@@ -22,7 +22,7 @@ const props = defineProps({
   },
   pageSizeOptions: {
     type: Array,
-    default: () => [10, 30, 50],
+    default: () => [10, 15, 25, 50],
   },
 });
 

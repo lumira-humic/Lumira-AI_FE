@@ -34,13 +34,13 @@ defineEmits(['close'])
             @click.self="closeOnBackdrop && $emit('close')">
             <div class="relative w-full bg-white rounded-xl shadow-2xl pt-6 px-6 pb-4 transition-all" :class="maxWidth">
                 <!-- Header -->
-                <div class="flex items-center justify-center mb-6">
+                <div class="flex items-center justify-center mb-8">
                     <h3 class="text-lg not-only:sm:text-xl font-bold text-neutral-800" :class="centerTitle ? 'w-full text-center' : ''">{{
                         title }}
                     </h3>
                     <!-- Close Button -->
                     <button v-if="showCloseButton" @click="$emit('close')"
-                        class="absolute top-5 right-5 rounded-full hover:bg-neutral-100 p-1 text-neutral-600 hover:text-neutral-800 cursor-pointer">
+                        class="absolute top-5 right-5 rounded-full hover:bg-neutral-100 p-1.5 text-neutral-600 hover:text-neutral-800 cursor-pointer">
                         <X class="w-5 h-5" />
                     </button>
                 </div>

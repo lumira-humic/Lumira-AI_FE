@@ -2,9 +2,9 @@
 import iconAiLumira from '@/assets/images/lumira-logo-img.png'
 
 const productLinks = [
-  { name: 'Key Features', href: '#' },
-  { name: 'How It Works', href: '#' },
-  { name: 'Pricing', href: '#' },
+  { name: 'Key Features', href: '#features' },
+  { name: 'How It Works', href: '#how-it-works' },
+  { name: 'Why Choose Us', href: '#why-us' },
 ]
 
 const supportLinks = [
@@ -23,7 +23,7 @@ const socialLinks = [
 
 <template>
   <footer class="bg-[#2E2E2E] text-white py-12 font-sans">
-    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+    <div class="max-w-378 mx-auto px-6 sm:px-8 xl:px-11">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-8 mb-12">
         <!-- Logo & Description -->
         <div class="md:col-span-2 flex items-start gap-8 pr-0 md:pr-12">

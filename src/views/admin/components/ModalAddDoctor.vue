@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from "vue";
 
+import { dataService } from "@/services/dataService";
 import BaseModal from "@/components/common/BaseModal.vue";
 import ModalSavedChanges from "./ModalSavedChanges.vue";
-import { dataService } from "@/services/dataService";
+
 
 defineProps({
   isOpen: Boolean,
@@ -47,7 +48,7 @@ const handleSavedClose = () => {
     @close="$emit('close')"
     :showCloseButton="true"
     :centerTitle="true"
-    :closeOnBackdrop="!showSavedChangesModal && !isLoading"
+    :closeOnBackdrop="false"
   >
     <div class="space-y-6 px-2">
       <!-- Name -->
@@ -89,7 +90,7 @@ const handleSavedClose = () => {
           <button
             type="button"
             @click="form.status = 'Active'"
-            class="flex-1 py-1.5 rounded-full text-sm font-medium transition-all duration-200"
+            class="cursor-pointer flex-1 py-1.5 rounded-full text-sm font-medium transition-all duration-200"
             :class="
               form.status === 'Active'
                 ? 'bg-white text-green-500 shadow-sm'
@@ -101,7 +102,7 @@ const handleSavedClose = () => {
           <button
             type="button"
             @click="form.status = 'Inactive'"
-            class="flex-1 py-1.5 rounded-full text-sm font-medium transition-all duration-200"
+            class="cursor-pointer flex-1 py-1.5 rounded-full text-sm font-medium transition-all duration-200"
             :class="
               form.status === 'Inactive'
                 ? 'bg-white text-[#0099ff] shadow-sm'

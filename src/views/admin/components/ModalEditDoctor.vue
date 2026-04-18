@@ -1,10 +1,11 @@
 <script setup>
 
 import { ref, watch } from "vue";
+
+import { dataService } from "@/services/dataService";
 import BaseModal from "@/components/common/BaseModal.vue";
 import ModalChangePassword from "./ModalChangePassword.vue";
 import ModalSavedChanges from "./ModalSavedChanges.vue";
-import { dataService } from "@/services/dataService";
 
 
 const props = defineProps({
@@ -50,7 +51,6 @@ const isLoading = ref(false);
 const handleSubmit = async () => {
   isLoading.value = true;
   try {
-    // Kirim ke API updateDoctor
     await dataService.updateDoctor(props.doctor.id, {
       name: form.value.name,
       email: form.value.email,
@@ -80,7 +80,7 @@ const handleChangePasswordSubmit = (data) => {
     @close="$emit('close')"
     :showCloseButton="true"
     :centerTitle="true"
-    :closeOnBackdrop="!showSavedChangesModal && !isLoading"
+    :closeOnBackdrop="false"
   >
     <div class="space-y-6 px-2">
       <!-- Name -->
@@ -119,9 +119,9 @@ const handleChangePasswordSubmit = (data) => {
       <div class="flex justify-end px-1">
         <button
           @click="showChangePasswordModal = true"
-          class="text-sm text-red-500 hover:text-red-600 font-medium"
+          class="cursor-pointer text-sm text-red-500 hover:text-red-600 font-medium"
         >
-           <span class="text-blue-500 hover:text-blue-600">Change Password</span>
+          <span class="text-blue-500 hover:text-blue-600">Change Password</span>
         </button>
       </div>
       <!-- Status Custom Toggle -->

@@ -242,7 +242,7 @@ onMounted(() => {
       </div>
     </div>
     <!-- Modal confirmation for logout -->
-    <BaseModal :isOpen="showLogoutModal" title="Sign Out" @close="closeLogoutModal" maxWidth="max-w-sm">
+    <BaseModal :isOpen="showLogoutModal" title="Sign Out" @close="closeLogoutModal" maxWidth="max-w-sm" :closeOnBackdrop="false">
       <p class="text-neutral-700">Are you sure you want to sign out of the Admin panel?</p>
       <template #footer>
         <button
