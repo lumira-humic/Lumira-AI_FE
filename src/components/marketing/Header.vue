@@ -132,7 +132,7 @@ onBeforeUnmount(() => {
 .navbar {
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 49;
   padding: 0.9rem 0;
   background: transparent;
   transition: background-color 0.35s ease, box-shadow 0.35s ease, backdrop-filter 0.35s ease;
