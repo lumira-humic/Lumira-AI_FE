@@ -190,7 +190,7 @@ watch(
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F2F2F2]">
+  <div class="flex h-dvh flex-col overflow-hidden bg-[#EAEAEA]">
     <!-- Header -->
     <header class="bg-linear-to-r from-[#97D2F8] to-[#A8D8F6] rounded-b-[50px] px-3 sm:px-5 py-3 sm:py-4">
       <div class="grid grid-cols-3 items-center">
@@ -207,16 +207,16 @@ watch(
       </div>
     </header>
     <!-- Main Content -->
-    <div class="flex gap-8 p-3 sm:px-5 pt-6 sm:pt-10">
+    <div class="flex min-h-0 flex-1 gap-8 p-3 sm:px-5 pt-4 sm:pt-10">
       <!-- Left Sidebar/Content -->
-      <aside class="hidden lg:flex w-64 shrink-0 flex-col">
+      <aside class="hidden lg:flex w-64 shrink-0 flex-col min-h-0">
         <nav class="space-y-3">
           <router-link
             v-for="item in menuItems"
             :key="item.path"
             :to="item.path"
             class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-6 transition-colors"
-            :class="isActive(item) ? 'font-semibold bg-[#C2E8FF]' : 'font-medium hover:bg-neutral-50'"
+            :class="isActive(item) ? 'font-semibold bg-[#C2E8FF]' : 'bg-white font-medium hover:bg-neutral-50'"
           >
             <div class="flex items-center gap-3">
               <span class="h-8 w-8 flex items-center justify-center">
@@ -244,7 +244,7 @@ watch(
         </div>
       </aside>
       <!-- Main Data -->
-      <main class="min-w-0 flex-1">
+      <main class="min-w-0 flex min-h-0 flex-1 flex-col">
         <!-- Header -->
         <header class="mb-4 flex items-center justify-between lg:hidden">
           <p class="text-lg font-bold text-neutral-700">Doctor Dashboard</p>
@@ -253,8 +253,8 @@ watch(
           </button>
         </header>
         <!-- Main Content -->
-        <div class="flex h-[calc(100vh-9rem)] flex-col">
-          <div class="min-h-0 flex-1 overflow-hidden rounded-2xl">
+        <div class="flex min-h-0 flex-1 flex-col">
+          <div class="min-h-0 flex-1 overflow-hidden">
             <RouterView v-slot="{ Component }">
               <component
                 :is="Component"
@@ -266,7 +266,7 @@ watch(
           <!-- Pagination & Chat Dock  -->
           <div
             v-if="showBottomDock"
-            class="mt-4 flex flex-col gap-3 lg:flex-row lg:justify-between"
+            class="mt-4 shrink-0 flex flex-col gap-3 lg:flex-row lg:justify-between"
           >
             <DoctorPaginationControl
               :current-page="paginationState.page"
@@ -284,7 +284,7 @@ watch(
     <!-- Right Sidebar/Content If tobe small screen -->
     <div v-if="isSidebarOpen" class="fixed inset-0 z-50 flex lg:hidden">
       <div class="absolute inset-0 bg-black/40" @click="isSidebarOpen = false"></div>
-      <div class="relative ml-auto flex h-full w-72 flex-col bg-[#F2F2F2] p-4">
+      <div class="relative ml-auto flex h-full w-72 flex-col bg-[#EAEAEA] p-4">
         <button
           @click="isSidebarOpen = false"
           class="cursor-pointer mb-4 ml-auto rounded-lg border border-neutral-300 bg-white p-2 text-neutral-600"
@@ -299,7 +299,7 @@ watch(
             :to="item.path"
             @click="isSidebarOpen = false"
             class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-4"
-            :class="isActive(item) ? 'font-semibold bg-[#C2E8FF]' : 'font-medium hover:bg-neutral-50'"
+            :class="isActive(item) ? 'font-semibold bg-[#C2E8FF]' : 'bg-white font-medium hover:bg-neutral-50'"
           >
             <div class="flex items-center gap-3">
               <span class="h-8 w-8 flex items-center justify-center">

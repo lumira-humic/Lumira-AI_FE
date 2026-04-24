@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
+import { useQuery } from "@tanstack/vue-query";
 import { useRoute, useRouter } from "vue-router";
 
 import { dataService } from "@/services/dataService.js";
@@ -31,9 +32,8 @@ const route = useRoute();
 
 const currentFilter = ref("All");
 const searchQuery = ref("");
-const patients = ref([]);
-const isLoading = ref(true);
-const errorMessage = ref("");
+const debouncedSearch = ref("");
+let searchDebounceTimer;
 
 watch(
   () => route.query.filter,
@@ -42,6 +42,26 @@ watch(
   },
   { immediate: true },
 );
+
+watch(
+  () => searchQuery.value,
+  (nextValue) => {
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+    }
+
+    searchDebounceTimer = setTimeout(() => {
+      debouncedSearch.value = String(nextValue || "").trim();
+    }, 350);
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+  }
+});
 
 const normalizeReviewStatus = (review) => {
   return String(review || "").trim().toUpperCase();
@@ -88,13 +108,81 @@ const isAttentionCase = (patient) => {
   return !patient.image || aiLabel.includes("malignant") || aiLabel === "-";
 };
 
-const searchedPatients = computed(() => {
-  if (!searchQuery.value) {
-    return [...patients.value];
+const hasStatusFilter = computed(() => {
+  return currentFilter.value === "Not Yet" || currentFilter.value === "Done" || currentFilter.value === "Attention";
+});
+
+const requestPage = computed(() => {
+  if (hasStatusFilter.value) {
+    return 1;
   }
 
-  const query = searchQuery.value.toLowerCase();
-  return patients.value.filter((patient) => {
+  return Math.max(1, Number(props.page || 1));
+});
+
+const requestLimit = computed(() => {
+  if (hasStatusFilter.value) {
+    return 100;
+  }
+
+  return Math.max(1, Number(props.limit || 10));
+});
+
+const patientsQuery = useQuery({
+  queryKey: computed(() => [
+    "doctor-dashboard-patients",
+    requestPage.value,
+    requestLimit.value,
+    debouncedSearch.value,
+  ]),
+  queryFn: () => {
+    return dataService.getPatients({
+      withMeta: true,
+      page: requestPage.value,
+      limit: requestLimit.value,
+      search: debouncedSearch.value,
+    });
+  },
+  placeholderData: (previousData) => previousData,
+  staleTime: 1000 * 20,
+  gcTime: 1000 * 60 * 10,
+  retry: 1,
+});
+
+const serverItems = computed(() => {
+  return Array.isArray(patientsQuery.data.value?.items) ? patientsQuery.data.value.items : [];
+});
+
+const serverMeta = computed(() => {
+  const fallbackTotal = serverItems.value.length;
+
+  return {
+    page: Number(patientsQuery.data.value?.meta?.page || requestPage.value),
+    limit: Number(patientsQuery.data.value?.meta?.limit || requestLimit.value),
+    total: Number(patientsQuery.data.value?.meta?.total || fallbackTotal),
+    totalPages: Number(patientsQuery.data.value?.meta?.totalPages || 1),
+  };
+});
+
+const useDummyMode = computed(() => {
+  return Number(serverMeta.value.total || serverItems.value.length) <= 1;
+});
+
+const dummyPatients = computed(() => {
+  return generateDoctorDummyPatients(serverItems.value[0], 51);
+});
+
+const searchedPatients = computed(() => {
+  if (!useDummyMode.value) {
+    return [...serverItems.value];
+  }
+
+  if (!debouncedSearch.value) {
+    return [...dummyPatients.value];
+  }
+
+  const query = debouncedSearch.value.toLowerCase();
+  return dummyPatients.value.filter((patient) => {
     return (
       String(patient.id || "").toLowerCase().includes(query) ||
       String(patient.code || "").toLowerCase().includes(query) ||
@@ -119,12 +207,26 @@ const filteredPatients = computed(() => {
   return searchedPatients.value;
 });
 
+const useLocalPagination = computed(() => {
+  return useDummyMode.value || hasStatusFilter.value;
+});
+
+const totalItems = computed(() => {
+  if (useLocalPagination.value) {
+    return filteredPatients.value.length;
+  }
+
+  return Number(serverMeta.value.total || filteredPatients.value.length);
+});
+
 const summaryCounts = computed(() => {
+  const summarySource = useLocalPagination.value ? searchedPatients.value : serverItems.value;
+
   return {
-    all: patients.value.length,
-    waiting: patients.value.filter((patient) => isPendingStatus(patient.review)).length,
-    done: patients.value.filter((patient) => isDoneStatus(patient.review)).length,
-    attention: patients.value.filter((patient) => isAttentionCase(patient)).length,
+    all: useLocalPagination.value ? summarySource.length : totalItems.value,
+    waiting: summarySource.filter((patient) => isPendingStatus(patient.review)).length,
+    done: summarySource.filter((patient) => isDoneStatus(patient.review)).length,
+    attention: summarySource.filter((patient) => isAttentionCase(patient)).length,
   };
 });
 
@@ -162,7 +264,7 @@ const sectionConfig = computed(() => {
 
 const totalPages = computed(() => {
   const safeLimit = Math.max(1, Number(props.limit || 1));
-  return Math.max(1, Math.ceil(filteredPatients.value.length / safeLimit));
+  return Math.max(1, Math.ceil(totalItems.value / safeLimit));
 });
 
 const currentPage = computed(() => {
@@ -179,6 +281,10 @@ const currentPage = computed(() => {
 });
 
 const paginatedPatients = computed(() => {
+  if (!useLocalPagination.value) {
+    return filteredPatients.value;
+  }
+
   const safeLimit = Math.max(1, Number(props.limit || 1));
   const start = (currentPage.value - 1) * safeLimit;
   const end = start + safeLimit;
@@ -186,15 +292,14 @@ const paginatedPatients = computed(() => {
 });
 
 const paginationMeta = computed(() => {
-  const totalItems = filteredPatients.value.length;
   const safeLimit = Math.max(1, Number(props.limit || 1));
-  const from = totalItems === 0 ? 0 : (currentPage.value - 1) * safeLimit + 1;
-  const to = totalItems === 0 ? 0 : Math.min(currentPage.value * safeLimit, totalItems);
+  const from = totalItems.value === 0 ? 0 : (currentPage.value - 1) * safeLimit + 1;
+  const to = totalItems.value === 0 ? 0 : Math.min(currentPage.value * safeLimit, totalItems.value);
 
   return {
     page: currentPage.value,
     totalPages: totalPages.value,
-    totalItems,
+    totalItems: totalItems.value,
     limit: safeLimit,
     from,
     to,
@@ -240,6 +345,22 @@ const getPatientCode = (patient, index) => {
   return String(index + 1).padStart(3, "0");
 };
 
+const isLoading = computed(() => {
+  return patientsQuery.isPending.value && !patientsQuery.data.value;
+});
+
+const isRefreshing = computed(() => {
+  return patientsQuery.isFetching.value && !!patientsQuery.data.value;
+});
+
+const errorMessage = computed(() => {
+  if (!patientsQuery.isError.value) {
+    return "";
+  }
+
+  return "Failed to load patients. Please try again.";
+});
+
 const openReview = (patientId) => {
   router.push({
     name: "review-console",
@@ -248,39 +369,13 @@ const openReview = (patientId) => {
   });
 };
 
-const fetchPatients = async () => {
-  isLoading.value = true;
-  errorMessage.value = "";
-
-  try {
-    const response = await dataService.getPatients({
-      withMeta: true,
-      page: 1,
-      limit: 200,
-    });
-
-    const sourceItems = Array.isArray(response?.items) ? response.items : [];
-    const shouldUseDummy = Number(response?.meta?.total || sourceItems.length) <= 1;
-
-    patients.value = shouldUseDummy
-      ? generateDoctorDummyPatients(sourceItems[0], 51)
-      : sourceItems;
-  } catch (error) {
-    patients.value = [];
-    errorMessage.value = "Failed to load patients. Please try again.";
-    console.error("Failed to fetch patients:", error);
-  } finally {
-    isLoading.value = false;
-  }
+const retryFetch = () => {
+  patientsQuery.refetch();
 };
-
-onMounted(async () => {
-  await fetchPatients();
-});
 </script>
 
 <template>
-  <section class="flex h-full min-h-0 flex-col rounded-2xl">
+  <section class="flex h-full min-h-0 flex-col bg-[#EAEAEA]">
     <!-- Header -->
     <div class="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-center sm:gap-8">
       <div class="flex items-center gap-2 sm:gap-3">
@@ -291,22 +386,24 @@ onMounted(async () => {
             class="h-6 w-6 object-contain sm:h-11 sm:w-11"
           />
         </span>
-        <h1 class="text-base font-semibold text-neutral-700 sm:text-xl">{{ sectionConfig.title }}</h1>
+        <h1 class="text-base font-semibold text-neutral-900 sm:text-xl">{{ sectionConfig.title }}</h1>
         <span class="text-base font-semibold text-neutral-700 sm:text-xl">{{ sectionConfig.count }}</span>
       </div>
-
       <SearchInput
         v-model="searchQuery"
         :disabled="isLoading || !!errorMessage"
         placeholder="Search By ID or Name"
         wrapperClass="max-w-3xl"
+        customMainClass="py-2! sm:py-4!"
       />
     </div>
+    <p v-if="isRefreshing" class="-mt-3 mb-3 text-xs text-neutral-500">
+      <!-- Refreshing patients... -->
+    </p>
     <!-- Table Header -->
-    <div class="grid grid-cols-6 px-3 py-2 text-lg font-semibold text-neutral-600">
-      <div class="col-span-1"></div>
-      <div class="col-span-1">ID</div>
-      <div class="col-span-1">Name</div>
+    <div class="grid grid-cols-5 pl-3 pr-8 py-2 text-base sm:text-lg xl:text-xl font-semibold text-neutral-900">
+      <div class="col-span-1 text-center">ID</div>
+      <div class="col-span-1 text-center">Name</div>
       <div class="col-span-1 text-center">AI Analysis</div>
       <div class="col-span-1 text-center">Image</div>
       <div class="col-span-1 text-center">Review</div>
@@ -318,47 +415,59 @@ onMounted(async () => {
     <div v-else-if="errorMessage" class="rounded-xl bg-red-50 py-8 text-center text-red-600">
       <p class="mb-4 font-medium">{{ errorMessage }}</p>
       <button
-        @click="fetchPatients"
+        @click="retryFetch"
         class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
       >
         Retry
       </button>
     </div>
-    <div v-else class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+    <div v-else class="min-h-0 max-h-[52vh] space-y-2 overflow-y-auto pr-2 sm:max-h-none sm:flex-1">
       <template v-if="paginatedPatients.length > 0">
         <div
           v-for="(patient, index) in paginatedPatients"
           :key="`${patient.id}-${index}`"
-          class="grid grid-cols-6 items-center rounded-2xl bg-[#E8E8E8] px-3 py-3"
+          class="grid grid-cols-5 items-center text-sm sm:text-base xl:text-lg rounded-xl bg-white p-4 mt-3"
         >
-          <div class="col-span-1 flex items-center justify-center gap-3">
-            <img :src="PatientIcon" alt="Patient" class="h-10 w-10 object-contain" />
-            <span class="text-2xl font-semibold text-neutral-600">P{{ getPatientCode(patient, index) }}</span>
+          <div class="col-span-1 flex items-center sm:gap-6 xl:gap-12 pl-2 gap-2">
+            <img :src="PatientIcon" alt="Patient" class="w-6 h-6 sm:h-10 sm:w-10 object-contain" />
+            <span class="font-semibold text-neutral-600">P{{ getPatientCode(patient, index) }}</span>
           </div>
-          <div class="col-span-1 text-2xl font-semibold text-neutral-600">{{ patient.name || "-" }}</div>
-          <div class="col-span-1 text-center text-2xl font-semibold" :class="getAiAnalysisText(patient).class">
-            {{ getAiAnalysisText(patient).text === "-" ? "⚠" : getAiAnalysisText(patient).text }}
+          <div class="col-span-1 text-center font-semibold text-neutral-600">{{ patient.name || "-" }}</div>
+          <div
+            class="col-span-1 text-center font-semibold"
+            :class="getAiAnalysisText(patient).class"
+          >
+            <template v-if="getAiAnalysisText(patient).text === '-'">
+              <img
+                :src="AttentionIcon"
+                alt="Warning Icon"
+                class="w-4 h-4 sm:h-6 sm:w-6 object-contain mx-auto"
+              />
+            </template>
+            <template v-else>
+              {{ getAiAnalysisText(patient).text }}
+            </template>
           </div>
-          <div class="col-span-1 text-center text-2xl font-semibold">
-            <span v-if="patient.image" class="text-[#2BC11F]">Yes</span>
-            <span v-else class="text-amber-500">⚠</span>
+          <div class="col-span-1 flex justify-center">
+            <span v-if="patient.image" class="font-semibold text-[#2BC11F]">Yes</span>
+            <img v-else :src="AttentionIcon" alt="Warning Icon" class="w-4 h-4 sm:h-6 sm:w-6 object-contain" />
           </div>
-          <div class="col-span-1 text-center">
-            <span v-if="isDoneStatus(patient.review)" class="text-2xl font-semibold text-[#2BC11F]">Done</span>
+          <div class="col-span-1 flex justify-center">
+            <span v-if="isDoneStatus(patient.review)" class="font-semibold text-[#2BC11F]">Done</span>
             <button
               v-else-if="patient.image"
               @click="openReview(patient.id)"
-              class="rounded-2xl bg-[#A9DAF9] px-6 py-2 text-xl font-semibold text-[#2E6D90] hover:bg-[#96d1f3]"
+              class="rounded-base bg-[#A9DAF9] px-6 py-2 text-base font-semibold text-[#2E6D90] hover:bg-[#96d1f3]"
             >
               Let's Review
             </button>
-            <span v-else class="text-2xl font-semibold text-amber-500">⚠</span>
+            <img v-else :src="AttentionIcon" alt="Warning Icon" class="w-4 h-4 sm:h-6 sm:w-6 object-contain" />
           </div>
         </div>
       </template>
 
       <div v-else class="rounded-xl bg-[#E8E8E8] py-10 text-center text-neutral-500">
-        No patients match your filter.
+        No patients match your filter
       </div>
     </div>
   </section>
