@@ -98,7 +98,7 @@ const updateLimit = (event) => {
 </script>
 
 <template>
-  <div class="flex w-full flex-wrap items-center gap-2 text-sm text-neutral-700 lg:w-auto">
+  <div class="flex w-full flex-wrap justify-center lg:justify-start items-center gap-2 text-sm text-neutral-700 lg:w-auto">
     <button
       type="button"
       :disabled="isFirstPage"
