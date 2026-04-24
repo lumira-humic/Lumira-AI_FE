@@ -82,9 +82,20 @@ const getBadgeValue = (badgeKey) => {
 
 const refreshSidebarBadges = async () => {
   try {
-    const stats = await dataService.getDashboardStats()
-    const totalDoctor = Number(stats.find((s) => s.label?.toLowerCase().includes('doctor'))?.value || 0)
-    const totalPatient = Number(stats.find((s) => s.label?.toLowerCase().includes('patient'))?.value || 0)
+    const [doctors, patientsResult] = await Promise.allSettled([
+      dataService.getDoctors(),
+      dataService.getPatients({ withMeta: true, page: 1, limit: 1 }),
+    ])
+
+    const totalDoctor =
+      doctors.status === 'fulfilled' && Array.isArray(doctors.value)
+        ? doctors.value.length
+        : 0
+
+    const totalPatient =
+      patientsResult.status === 'fulfilled'
+        ? Number(patientsResult.value?.meta?.total || 0)
+        : 0
 
     sidebarBadges.value = {
       doctor: totalDoctor,
@@ -190,7 +201,7 @@ onMounted(() => {
             </button>
           </header>
           <!-- Table -->
-          <div class="h-[calc(100vh-9rem)] overflow-y-auto">
+          <div class="h-[calc(100vh-9rem)] overflow-hidden flex flex-col">
             <RouterView />
           </div>
         </main>
