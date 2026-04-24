@@ -16,6 +16,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  customMainClass: {
+    type: String,
+    default: "",
+  },
 });
 
 defineEmits(["update:modelValue"]);
@@ -46,7 +50,7 @@ defineEmits(["update:modelValue"]);
       @input="$emit('update:modelValue', $event.target.value)"
       :disabled="disabled"
       type="text"
-      class="text-sm sm:text-base block w-full pl-5 pr-5 py-3 rounded-full leading-5 bg-white placeholder-neutral-500 focus:outline-none focus:placeholder-neutral-400 focus:ring-2 focus:ring-sky-500 focus:ring-inset transition duration-150 ease-in-out disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500 disabled:focus:ring-0"
+      :class="[customMainClass, 'text-sm sm:text-base block w-full pl-5 pr-5 py-3 rounded-full leading-5 bg-white placeholder-neutral-500 focus:outline-none focus:placeholder-neutral-400 focus:ring-2 focus:ring-sky-500 focus:ring-inset transition duration-150 ease-in-out disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500 disabled:focus:ring-0']"
       :placeholder="placeholder"
     />
   </div>
