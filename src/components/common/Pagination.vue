@@ -1,5 +1,13 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
+import {
+  ChevronRight,
+  ChevronLeft,
+  ChevronFirst,
+  ChevronLast,
+  ChevronDown,
+} from "@lucide/vue";
+
 
 const props = defineProps({
   currentPage: {
@@ -12,112 +20,178 @@ const props = defineProps({
   },
   totalItems: {
     type: Number,
-    required: false,
-    default: 0
+    required: true,
   },
-  itemsPerPage: {
+  pageSize: {
     type: Number,
-    required: false,
-    default: 10
-  }
+    required: true,
+  },
+  pageSizeOptions: {
+    type: Array,
+    default: () => [10, 15, 25, 50],
+  },
 });
 
-const emit = defineEmits(["page-change", "update:itemsPerPage"]);
+const emit = defineEmits(["update:page", "update:limit"]);
 
-const onPageClick = (page) => {
-  if (page >= 1 && page <= props.totalPages && page !== props.currentPage) {
-    emit("page-change", page);
+const pageInput = ref(String(props.currentPage));
+
+watch(
+  () => props.currentPage,
+  (nextValue) => {
+    pageInput.value = String(nextValue);
+  },
+);
+
+const maxPage = computed(() => Math.max(1, props.totalPages || 1));
+
+const fromItem = computed(() => {
+  if (props.totalItems === 0) {
+    return 0;
+  }
+
+  return (props.currentPage - 1) * props.pageSize + 1;
+});
+
+const toItem = computed(() => {
+  if (props.totalItems === 0) {
+    return 0;
+  }
+
+  return Math.min(props.currentPage * props.pageSize, props.totalItems);
+});
+
+const isFirstPage = computed(() => props.currentPage <= 1);
+const isLastPage = computed(() => props.currentPage >= maxPage.value);
+
+const clampPage = (rawValue) => {
+  const parsed = Number.parseInt(String(rawValue), 10);
+  if (!Number.isFinite(parsed)) {
+    return props.currentPage;
+  }
+
+  if (parsed < 1) {
+    return 1;
+  }
+
+  if (parsed > maxPage.value) {
+    return maxPage.value;
+  }
+
+  return parsed;
+};
+
+const updatePage = (nextPage) => {
+  const page = clampPage(nextPage);
+  if (page !== props.currentPage) {
+    emit("update:page", page);
   }
 };
 
-const onItemsPerPageChange = (event) => {
-  emit("update:itemsPerPage", parseInt(event.target.value));
-  emit("page-change", 1); // Reset to first page when changing items per page
+const submitPageInput = () => {
+  updatePage(pageInput.value);
+  pageInput.value = String(clampPage(pageInput.value));
 };
 
-const startItem = computed(() => {
-  if (props.totalItems === 0) return 0;
-  return (props.currentPage - 1) * props.itemsPerPage + 1;
-});
+const updateLimit = (event) => {
+  const nextLimit = Number.parseInt(event.target.value, 10);
+  if (!Number.isFinite(nextLimit)) {
+    return;
+  }
 
-const endItem = computed(() => {
-  const end = props.currentPage * props.itemsPerPage;
-  return end > props.totalItems ? props.totalItems : end;
-});
+  emit("update:limit", nextLimit);
+};
 </script>
 
 <template>
-  <div class="flex justify-start items-center gap-4 mt-6 text-gray-500 text-sm font-medium">
-    <!-- Pagination controls -->
-    <div class="flex items-center gap-2">
-      <button
-        @click="onPageClick(1)"
-        :disabled="currentPage === 1"
-        class="p-1 hover:text-[#0D99FF] disabled:opacity-40 disabled:hover:text-gray-500 transition-colors"
-      >
-        <span class="font-bold text-base leading-none">|&lt;</span>
-      </button>
+  <div class="flex w-full flex-wrap items-center justify-center gap-2 text-sm text-neutral-700 lg:w-auto lg:justify-start">
+    <button
+      type="button"
+      :disabled="isFirstPage"
+      @click="updatePage(1)"
+      class="cursor-pointer text-neutral-900 disabled:cursor-not-allowed disabled:text-neutral-400"
+      aria-label="First page"
+    >
+      <ChevronFirst class="h-5 w-5" />
+    </button>
 
+    <div class="flex items-center">
       <button
-        @click="onPageClick(currentPage - 1)"
-        :disabled="currentPage === 1"
-        class="px-1 py-1 flex items-center hover:text-[#0D99FF] disabled:opacity-40 disabled:hover:text-gray-500 transition-colors"
+        type="button"
+        :disabled="isFirstPage"
+        @click="updatePage(currentPage - 1)"
+        class="cursor-pointer text-neutral-900 disabled:cursor-not-allowed disabled:text-neutral-400"
+        aria-label="Previous page"
       >
-        <span class="mr-1">&lt;</span> Previous
+        <ChevronLeft class="h-5 w-5" />
       </button>
-
-      <div class="flex items-center gap-2 mx-1">
-        <input 
-          type="number" 
-          :value="currentPage"
-          @change="(e) => {
-            let val = parseInt(e.target.value);
-            if (isNaN(val) || val < 1) val = 1;
-            if (val > totalPages) val = totalPages;
-            if (val !== currentPage) onPageClick(val);
-            e.target.value = val;
-          }"
-          class="w-10 text-center border border-gray-300 rounded py-1 focus:outline-none focus:border-[#0D99FF] text-black"
-          min="1"
-          :max="Math.max(1, totalPages)"
-        />
-        <span class="text-black">of {{ Math.max(1, totalPages) }}</span>
-      </div>
-
       <button
-        @click="onPageClick(currentPage + 1)"
-        :disabled="currentPage === totalPages || totalPages === 0"
-        class="px-1 py-1 flex items-center hover:text-[#0D99FF] disabled:opacity-40 disabled:hover:text-gray-500 transition-colors"
+        type="button"
+        :disabled="isFirstPage"
+        @click="updatePage(currentPage - 1)"
+        class="cursor-pointer font-semibold text-[#009FFF] disabled:cursor-not-allowed disabled:text-neutral-400"
       >
-        Next <span class="ml-1">&gt;</span>
-      </button>
-      
-      <button
-        @click="onPageClick(totalPages)"
-        :disabled="currentPage === totalPages || totalPages === 0"
-        class="p-1 hover:text-[#0D99FF] disabled:opacity-40 disabled:hover:text-gray-500 transition-colors"
-      >
-        <span class="font-bold text-base leading-none">&gt;|</span>
+        Previous
       </button>
     </div>
 
-    <!-- Items per page dropdown -->
-    <div class="flex items-center text-black">
-      <select 
-        :value="itemsPerPage" 
-        @change="onItemsPerPageChange"
-        class="border border-[#0D99FF] rounded px-3 py-1 focus:outline-none focus:ring-1 focus:ring-[#0D99FF] bg-white cursor-pointer"
+    <input
+      v-model="pageInput"
+      type="number"
+      min="1"
+      :max="maxPage"
+      @blur="submitPageInput"
+      @keyup.enter="submitPageInput"
+      class="ml-2 w-8 rounded border border-neutral-300 bg-white px-1 py-0.5 text-center text-sm font-semibold text-neutral-700 outline-none focus:border-sky-500"
+    />
+
+    <span class="mr-2 font-semibold text-neutral-700">of {{ maxPage }}</span>
+
+    <div class="flex items-center">
+      <button
+        type="button"
+        :disabled="isLastPage"
+        @click="updatePage(currentPage + 1)"
+        class="cursor-pointer font-semibold text-[#009FFF] disabled:cursor-not-allowed disabled:text-neutral-400"
       >
-        <option :value="10">10</option>
-        <option :value="15">15</option>
-        <option :value="25">25</option>
-        <option :value="50">50</option>
+        Next
+      </button>
+      <button
+        type="button"
+        :disabled="isLastPage"
+        @click="updatePage(currentPage + 1)"
+        class="cursor-pointer text-neutral-900 transition disabled:cursor-not-allowed disabled:text-neutral-400"
+        aria-label="Next page"
+      >
+        <ChevronRight class="h-5 w-5" />
+      </button>
+    </div>
+
+    <button
+      type="button"
+      :disabled="isLastPage"
+      @click="updatePage(maxPage)"
+      class="cursor-pointer text-neutral-900 disabled:cursor-not-allowed disabled:opacity-40"
+      aria-label="Last page"
+    >
+      <ChevronLast class="h-5 w-5" />
+    </button>
+
+    <div class="relative ml-6 inline-block">
+      <select
+        :value="pageSize"
+        @change="updateLimit"
+        class="cursor-pointer appearance-none rounded border border-neutral-300 bg-white py-1 pl-2 pr-7 text-sm font-semibold outline-none focus:border-sky-500"
+      >
+        <option v-for="option in pageSizeOptions" :key="option" :value="option">
+          {{ option }}
+        </option>
       </select>
+      <ChevronDown
+        class="pointer-events-none absolute right-2 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-neutral-900"
+      />
     </div>
 
-    <!-- Items count info -->
-    <div class="text-black ml-1">
-      {{ startItem }} - {{ endItem }} of {{ totalItems }} items
-    </div>
+    <span class="font-semibold text-neutral-900">{{ fromItem }} - {{ toItem }} of {{ totalItems }} items</span>
   </div>
 </template>

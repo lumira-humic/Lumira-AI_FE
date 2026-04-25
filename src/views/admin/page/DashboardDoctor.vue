@@ -253,9 +253,9 @@ const handleDeleteDoctor = async () => {
         :current-page="currentPage"
         :total-pages="totalPages"
         :total-items="totalItems"
-        :items-per-page="itemsPerPage"
-        @page-change="handlePageChange"
-        @update:itemsPerPage="handleItemsPerPageChange"
+        :page-size="itemsPerPage"
+        @update:page="handlePageChange"
+        @update:limit="handleItemsPerPageChange"
       />
     </div>
 
