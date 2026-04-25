@@ -8,7 +8,7 @@ import { dataService } from '@/services/dataService'
 import { useAppStore } from '@/stores/appStore'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
-import DoctorPaginationControl from '@/components/doctor/DoctorPaginationControl.vue'
+import Pagination from '@/components/common/Pagination.vue'
 import DoctorChatDock from '@/components/doctor/DoctorChatDock.vue'
 import DashboardIcon from '@/assets/admin/dashboard-sidebar.png'
 import DoneIcon from '@/assets/doctor/done.png'
@@ -268,7 +268,7 @@ watch(
             v-if="showBottomDock"
             class="mt-4 shrink-0 flex flex-col gap-3 lg:flex-row lg:justify-between"
           >
-            <DoctorPaginationControl
+            <Pagination
               :current-page="paginationState.page"
               :total-pages="paginationState.totalPages"
               :total-items="paginationState.totalItems"
