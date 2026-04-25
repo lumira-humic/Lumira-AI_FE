@@ -21,7 +21,6 @@ const decodeJwtPayload = (token) => {
   }
 };
 
-
 const normalizeAuthPayload = (payload) => {
   const accessToken = payload?.accessToken || "";
   const user = payload?.user || null;

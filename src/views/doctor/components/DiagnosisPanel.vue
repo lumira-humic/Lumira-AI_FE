@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed } from "vue";
+import { ref, computed } from "vue";
 
 
 const props = defineProps({
@@ -53,70 +53,71 @@ const getStatusClass = (status) => {
     }
   }
   // Inactive State (Dimmed)
-  return "bg-white text-slate-400 hover:bg-slate-50 border border-slate-100 hover:scale-105";
+  return "bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-300 hover:scale-105";
 };
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 h-full overflow-y-auto pr-2">
-    <div class="bg-gray-100 p-5 rounded-xl border border-slate-200 shadow-sm">
+  <div class="flex flex-col gap-3 h-full overflow-y-auto pr-2">
+    <!-- Patient Info -->
+    <div class="bg-white p-5 rounded-xl">
       <div class="mb-4">
-        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+        <p class="text-xs font-bold text-neutral-400 uppercase tracking-wider">
           Patient ID
         </p>
-        <p class="text-lg font-bold text-slate-700">{{ patientId }}</p>
+        <p class="text-lg font-bold text-neutral-700">{{ patientId }}</p>
       </div>
       <div class="mb-4">
-        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+        <p class="text-xs font-bold text-neutral-400 uppercase tracking-wider">
           Name
         </p>
-        <p class="text-lg font-bold text-slate-700">
+        <p class="text-lg font-bold text-neutral-700">
           {{ patientData?.name || "Unknown" }}
         </p>
       </div>
       <div>
-        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+        <p class="text-xs font-bold text-neutral-400 uppercase tracking-wider">
           Phone
         </p>
-        <p class="text-lg font-bold text-slate-700">
+        <p class="text-lg font-bold text-neutral-700">
           {{ patientData?.phone || "-" }}
         </p>
       </div>
     </div>
     <!-- Classification -->
-    <div class="bg-gray-100 p-5 rounded-xl border border-slate-200 shadow-sm">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-slate-600">Classification</h3>
-        <span class="text-xs font-bold px-2 py-1 rounded bg-slate-200 text-slate-500">
+    <div class="bg-white p-5 rounded-xl">
+      <div class="mb-4">
+        <h3 class="text-center font-bold text-neutral-800">Classification Result</h3>
+        <!-- <span class="text-xs font-bold px-2 py-1 rounded bg-neutral-200 text-neutral-500">
           AI: {{ aiPrediction }}
-        </span>
+        </span> -->
       </div>
-
+      <!-- Classification Options -->
       <div class="flex flex-col gap-3 relative">
         <button @click="setClass('Normal')"
-          class="p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
+          class="cursor-pointer p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
           :class="getStatusClass('Normal')">
           Normal
         </button>
 
         <button @click="setClass('Benign')"
-          class="p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
+          class="cursor-pointer p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
           :class="getStatusClass('Benign')">
           Benign
         </button>
 
         <button @click="setClass('Malignant')"
-          class="p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
+          class="cursor-pointer p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
           :class="getStatusClass('Malignant')">
           Malignant
         </button>
       </div>
-
-      <div class="mt-6 pt-4 border-t border-slate-200 animate-fade-in">
-        <p class="text-xs font-bold text-slate-400 uppercase mb-2">
+      <!-- Example Reference Image -->
+      <!-- <div class="mt-6 pt-4 border-t border-neutral-200 animate-fade-in">
+        <p class="text-xs font-bold text-neutral-400 uppercase mb-2">
           Reference: {{ selectedClass }} Example
         </p>
-        <div class="w-full h-32 bg-white rounded-lg overflow-hidden border border-slate-200 relative group">
+        <div class="w-full h-32 bg-white rounded-lg overflow-hidden border border-neutral-200 relative group">
           <img :src="currentRefImage"
             class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
           <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -125,7 +126,7 @@ const getStatusClass = (status) => {
             </span>
           </div>
         </div>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>

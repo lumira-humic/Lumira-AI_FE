@@ -115,7 +115,6 @@ const handleSave = async () => {
     );
   }
 };
-
 const handleImageUpdate = (newSrc) => {
   currentImageSrc.value = newSrc;
   doctorDrawings.value = [];
@@ -133,7 +132,7 @@ const getBrushButtonClass = (type) => {
     "px-4 py-2 rounded-lg font-bold text-sm transition-all border-2 flex items-center gap-2";
   const isActive = brushType.value === type;
   if (!isActive)
-    return base + " bg-white border-slate-200 text-slate-500 hover:bg-slate-50";
+    return base + " bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50";
   switch (type) {
     case "normal":
       return base + " bg-green-100 border-green-500 text-green-700 shadow-sm";
@@ -146,16 +145,16 @@ const getBrushButtonClass = (type) => {
     case "nocancer":
       return base + " bg-blue-100 border-blue-500 text-blue-700 shadow-sm";
     case "white":
-      return base + " bg-white border-slate-400 text-slate-700 shadow-sm ring-1 ring-slate-100";
+      return base + " bg-white border-neutral-400 text-neutral-700 shadow-sm ring-1 ring-neutral-100";
     case "erase":
-      return base + " bg-gray-100 border-gray-500 text-gray-700 shadow-sm";
+      return base + " bg-neutral-100 border-neutral-500 text-neutral-700 shadow-sm";
   }
 };
 </script>
 
 <template>
-  <div class="h-full w-full bg-slate-50 flex flex-col overflow-hidden relative">
-    <div id="workspace-container" class="flex-1 overflow-y-auto p-4 md:p-6 pb-32">
+  <div class="h-full w-full flex flex-col overflow-hidden relative">
+    <div id="workspace-container" class="flex-1 overflow-y-auto">
       <!-- Header -->
       <div class="text-center mb-8">
         <h1 class="text-2xl font-medium text-slate-600">
@@ -164,36 +163,32 @@ const getBrushButtonClass = (type) => {
       </div>
       <!-- Loader -->
       <div v-if="isLoading" class="flex justify-center p-12">
-        <p class="text-slate-400 font-bold animate-pulse">
+        <p class="text-neutral-400 font-bold animate-pulse">
           Loading Patient Data...
         </p>
       </div>
       <!-- Main Content -->
-      <div v-else class="flex flex-col lg:flex-row gap-6 max-w-full mx-auto">
-        <div class="flex-1 min-w-0">
-          <div class="bg-gray-100 rounded-3xl p-4 md:p-6 lg:p-8 mb-6 shadow-sm border border-slate-200 relative">
-            <div class="flex justify-between items-center mb-6">
-              <h2 class="font-bold text-slate-700 text-lg">Visual Analysis</h2>
-              <button @click="showImageModal = true" class="text-xs font-bold text-[#0099ff] hover:underline">
-                Upload New Image
-              </button>
-            </div>
-            <div class="flex flex-row flex-wrap gap-4 justify-center items-start">
-              <div class="flex flex-col items-center">
+      <div v-else class="relative flex flex-col lg:flex-row gap-6 max-w-full mx-auto">
+        <div class="flex-1 min-w-0 space-y-6">
+          <div class="bg-white rounded-2xl p-4 md:p-6 lg:p-8 relative">
+            <!-- Main Data -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[500px] overflow-hidden">
+              <!-- AI Result & Previous Review -->
+              <div class="col-span-1 w-full h-full flex flex-col items-center min-w-0 max-h-[400px]">
                 <div
-                  class="rounded-xl overflow-hidden border-4 border-white shadow-lg bg-black w-full max-w-[200px] aspect-square relative">
-                  <img :src="aiResultImageSrc" class="w-full h-full object-contain" />
+                  class="w-full h-full rounded-xl bg-white relative">
+                  <img :src="aiResultImageSrc" class="w-full h-full object-contain rounded-xl" />
                   <div class="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
                     AI GradCam
                   </div>
                 </div>
-                <p class="mt-3 font-bold text-slate-600 uppercase tracking-widest text-xs">
+                <p class="mt-3 font-bold text-neutral-600 uppercase tracking-widest text-xs">
                   AI Result
                 </p>
                 <!-- Previous Review Result (Only in Edit Mode / if exists) -->
                 <div v-if="patientData.doctorBrushImage" class="mt-6 flex flex-col items-center">
                   <div
-                    class="rounded-xl overflow-hidden border-4 border-white shadow-lg bg-black w-full max-w-[200px] aspect-square relative group cursor-pointer hover:scale-105 transition-transform"
+                    class="rounded-xl overflow-hidden border-4 border-white shadow-lg bg-black w-full max-w-50 aspect-square relative group cursor-pointer hover:scale-105 transition-transform"
                     @click="currentImageSrc = patientData.doctorBrushImage">
                     <img :src="patientData.doctorBrushImage" class="w-full h-full object-contain" />
                     <div
@@ -201,38 +196,48 @@ const getBrushButtonClass = (type) => {
                       Previous Review
                     </div>
                   </div>
-                  <p class="mt-2 font-bold text-slate-400 uppercase tracking-widest text-[10px]">
+                  <p class="mt-2 font-bold text-neutral-400 uppercase tracking-widest text-[10px]">
                     Click to Load
                   </p>
                 </div>
               </div>
-              <div class="flex flex-col items-center">
-                <MedicalCanvas ref="medicalCanvasRef" :baseImageSrc="currentImageSrc" :gradCamSrc="currentImageSrc"
-                  :brushType="brushType" :brushSize="brushSize" :brushOpacity="brushOpacity" :viewMode="viewMode"
-                  @update:drawings="(data) => (doctorDrawings = data)" />
+              <!-- RAW data image -->
+              <div class="col-span-1 w-full h-full flex flex-col items-center min-w-0">
+                <div class="max-w-full overflow-x-auto">
+                  <MedicalCanvas 
+                    ref="medicalCanvasRef" 
+                    :baseImageSrc="currentImageSrc" 
+                    :gradCamSrc="currentImageSrc"
+                    :brushType="brushType" 
+                    :brushSize="brushSize" 
+                    :brushOpacity="brushOpacity" 
+                    :viewMode="viewMode"
+                    @update:drawings="(data) => (doctorDrawings = data)" />
+                </div>
               </div>
             </div>
-
-            <div class="mt-8 flex flex-col gap-6 px-4 pt-6 border-t border-slate-200">
-              <div class="flex items-center gap-4 border-b border-slate-200 pb-6">
-                <span class="font-bold text-slate-600 w-24">Vis Mode:</span>
-                <div class="flex bg-white rounded-lg p-1 border border-slate-200">
-                  <button @click="viewMode = 'raw'" class="px-4 py-1.5 rounded-md text-sm font-bold transition-all"
+            <!-- Tools -->
+            <div class="mt-8 flex flex-col gap-6 px-4 pt-6 border-t border-neutral-400">
+              <!-- Visual Mode -->
+              <div class="flex items-center gap-4">
+                <span class="font-bold text-neutral-600 w-30">Visual Mode:</span>
+                <div class="flex bg-white rounded-lg p-2 border border-neutral-200">
+                  <button @click="viewMode = 'raw'" class="cursor-pointer px-4 py-1.5 rounded-md text-sm font-bold transition-all"
                     :class="viewMode === 'raw'
                       ? 'bg-[#0099ff] text-white shadow-sm'
-                      : 'text-slate-500 hover:bg-slate-50'
+                      : 'text-neutral-500 hover:bg-neutral-50'
                       ">
                     Raw Pixels
                   </button>
                   <button @click="viewMode = 'normalized'"
-                    class="px-4 py-1.5 rounded-md text-sm font-bold transition-all" :class="viewMode === 'normalized'
+                    class="cursor-pointer px-4 py-1.5 rounded-md text-sm font-bold transition-all" :class="viewMode === 'normalized'
                       ? 'bg-[#0099ff] text-white shadow-sm'
-                      : 'text-slate-500 hover:bg-slate-50'
+                      : 'text-neutral-500 hover:bg-neutral-50'
                       ">
                     Normalized
                   </button>
                 </div>
-                <p class="text-xs text-slate-400 ml-2">
+                <p class="text-xs text-neutral-400 ml-2">
                   *{{
                     viewMode === "raw"
                       ? "Edit raw output blocks"
@@ -240,32 +245,32 @@ const getBrushButtonClass = (type) => {
                   }}
                 </p>
               </div>
-
+              <!-- Focus Area -->
               <div class="flex items-center gap-4">
-                <span class="font-bold text-slate-600 w-24">Focus Area:</span>
+                <span class="font-bold text-neutral-600 w-30">Focus Area:</span>
                 <div class="flex flex-wrap gap-2">
-                  <button @click="setBrushType('normal')" :class="getBrushButtonClass('normal')">
+                  <button class="cursor-pointer" @click="setBrushType('normal')" :class="getBrushButtonClass('normal')">
                     <div class="w-3 h-3 bg-green-500 rounded-sm"></div>
                     Low
                   </button>
-                  <button @click="setBrushType('benign')" :class="getBrushButtonClass('benign')">
+                  <button class="cursor-pointer" @click="setBrushType('benign')" :class="getBrushButtonClass('benign')">
                     <div class="w-3 h-3 bg-yellow-400 rounded-sm"></div>
                     Medium
                   </button>
-                  <button @click="setBrushType('malignant')" :class="getBrushButtonClass('malignant')">
+                  <button class="cursor-pointer" @click="setBrushType('malignant')" :class="getBrushButtonClass('malignant')">
                     <div class="w-3 h-3 bg-red-600 rounded-sm"></div>
                     High
                   </button>
-                  <button @click="setBrushType('nocancer')" :class="getBrushButtonClass('nocancer')">
+                  <button class="cursor-pointer" @click="setBrushType('nocancer')" :class="getBrushButtonClass('nocancer')">
                     <div class="w-3 h-3 bg-blue-600 rounded-sm"></div>
                     Normal
                   </button>
-                  <button @click="setBrushType('white')" :class="getBrushButtonClass('white')">
-                    <div class="w-3 h-3 bg-white border border-slate-300 rounded-sm"></div>
+                  <button class="cursor-pointer" @click="setBrushType('white')" :class="getBrushButtonClass('white')">
+                    <div class="w-3 h-3 bg-white border border-neutral-300 rounded-sm"></div>
                     White
                   </button>
-                  <div class="w-px h-8 bg-slate-200 mx-2"></div>
-                  <button @click="setBrushType('erase')" :class="getBrushButtonClass('erase')">
+                  <div class="w-px h-8 bg-neutral-200 mx-2"></div>
+                  <button class="cursor-pointer" @click="setBrushType('erase')" :class="getBrushButtonClass('erase')">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
                       <path fill-rule="evenodd"
                         d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
@@ -275,73 +280,76 @@ const getBrushButtonClass = (type) => {
                   </button>
                 </div>
               </div>
-
+              <!-- Brush Area -->
               <div class="flex items-center gap-4">
-                <span class="font-bold text-slate-600 w-24">Brush Size:</span>
+                <span class="font-bold text-neutral-600 w-30">Brush Size:</span>
                 <div
-                  class="flex-1 flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-slate-200 max-w-md">
-                  <span class="text-xs font-bold text-slate-400">Small</span>
+                  class="flex-1 flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-neutral-200 max-w-md">
+                  <span class="text-xs font-bold text-neutral-400">Small</span>
                   <input type="range" min="1" max="5" step="1" v-model.number="brushSize"
-                    class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0099ff]" />
-                  <span class="text-xs font-bold text-slate-400">Large</span>
+                    class="flex-1 h-2 bg-neutral-200 rounded-lg appearance-none cursor-grab accent-[#0099ff]" />
+                  <span class="text-xs font-bold text-neutral-400">Large</span>
                 </div>
               </div>
-
+              <!-- Opacity Area -->
               <div class="flex items-center gap-4">
-                <span class="font-bold text-slate-600 w-24">Opacity:</span>
+                <span class="font-bold text-neutral-600 w-30">Opacity:</span>
                 <div
-                  class="flex-1 flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-slate-200 max-w-md">
-                  <span class="text-xs font-bold text-slate-400">0%</span>
+                  class="flex-1 flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-neutral-200 max-w-md">
+                  <span class="text-xs font-bold text-neutral-400">0%</span>
                   <input type="range" min="0.1" max="1" step="0.05" v-model.number="brushOpacity"
-                    class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0099ff]" />
-                  <span class="text-xs font-bold text-slate-400">100%</span>
+                    class="flex-1 h-2 bg-neutral-200 rounded-lg appearance-none cursor-grab accent-[#0099ff]" />
+                  <span class="text-xs font-bold text-neutral-400">100%</span>
                 </div>
               </div>
             </div>
           </div>
-
-          <div class="w-full mb-8">
-            <button @click="handleSave"
-              class="w-full bg-[#0099ff] hover:bg-blue-600 text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all active:scale-[0.99]">
-              Submit Diagnosis
-            </button>
-          </div>
-
-          <div class="bg-gray-100 rounded-xl p-6 border border-slate-200 flex flex-col md:flex-row gap-6">
-            <div class="flex-1">
-              <h3 class="font-bold text-slate-700 mb-4 text-lg">
-                Doctor's Diagnosis
-              </h3>
-              <div class="flex items-center gap-4 text-sm font-bold text-slate-500">
-                <span>Agree With AI?</span>
+          <!-- Doctor Diagnosis & Notes -->
+          <div class="bg-white rounded-2xl p-4 flex flex-col gap-6">
+            <!-- Input Select Agreement -->
+            <div class="flex gap-5">
+              <div class="flex flex-col gap-1">
+                <h3 class="font-bold text-neutral-700 text-base sm:text-lg">
+                  Doctor's Diagnosis
+                </h3>
+                <span class="text-neutral-500 text-sm sm:text-base">Agree With AI?</span>
+              </div>
+              <div class="flex justify-center flex-col gap-2 text-sm font-bold text-neutral-500">
                 <label class="flex items-center gap-2 cursor-pointer select-none"><input type="radio" value="agree"
-                    v-model="doctorAgreement" class="accent-green-500 w-5 h-5" /><span
+                    v-model="doctorAgreement" class="cursor-pointer accent-green-500 w-5 h-5" /><span
                     :class="doctorAgreement === 'agree' ? 'text-green-600' : ''">Agree</span></label>
                 <label class="flex items-center gap-2 cursor-pointer select-none"><input type="radio" value="disagree"
-                    v-model="doctorAgreement" class="accent-red-500 w-5 h-5" /><span :class="doctorAgreement === 'disagree' ? 'text-red-600' : ''
+                    v-model="doctorAgreement" class="cursor-pointer accent-red-500 w-5 h-5" /><span :class="doctorAgreement === 'disagree' ? 'text-red-600' : ''
                       ">Disagree</span></label>
               </div>
             </div>
-            <div class="flex-[2] flex gap-4">
-              <label class="font-bold text-slate-700 whitespace-nowrap mt-2">Add Note</label>
+            <!-- Textarea notes -->
+            <div class="flex-2 flex flex-col gap-3">
+              <label class="font-bold text-neutral-700 whitespace-nowrap mt-2">Add Note</label>
               <textarea v-model="doctorNote"
-                class="w-full h-24 p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-[#0099ff] outline-none resize-none bg-white"
+                class="w-full h-40 p-3 rounded-lg border border-neutral-300 focus:ring focus:ring-[#0099ff] outline-none resize-none bg-neutral-100"
                 placeholder="Type Here.."></textarea>
             </div>
           </div>
-
-          <div v-if="isSaved" class="mt-10 animate-fade-in-up">
-            <h2 class="text-2xl font-bold text-slate-700 mb-6">
+          <!-- Action Submit -->
+          <button @click="handleSave"
+            class="cursor-pointer w-full bg-[#0093EE] hover:bg-[#0077cc] text-white font-semibold text-base sm:text-lg py-2 sm:py-3 rounded-xl mb-4">
+            Submit Diagnosis
+          </button>
+          <div v-if="isSaved" class="bg-white rounded-2xl p-4 mt-10 animate-fade-in-up">
+            <h2 class="text-2xl font-bold text-neutral-700 mb-4">
               Result By Doctor
             </h2>
-            <div class="bg-gray-100 rounded-3xl p-8 border border-slate-200 flex flex-col md:flex-row gap-8">
+            <div class="flex flex-col md:flex-row gap-8">
+              <!-- Image Result -->
               <div
                 class="w-64 h-64 bg-black rounded-xl overflow-hidden border-4 border-white shadow-sm shrink-0 relative">
                 <img :src="savedDiagnosis.heatmapImage || currentImageSrc" class="w-full h-full object-cover" />
               </div>
+              <!-- Addtional Info -->
               <div class="flex-1 space-y-4">
                 <div class="flex items-center gap-2">
-                  <span class="font-bold text-slate-600">Agree With AI?</span>
+                  <span class="font-bold text-neutral-800">Agree With AI?</span>
                   <span class="font-bold" :class="savedDiagnosis.agreement === 'agree'
                     ? 'text-green-500'
                     : 'text-red-500'
@@ -352,17 +360,23 @@ const getBrushButtonClass = (type) => {
                     }}</span>
                 </div>
                 <div>
-                  <span class="font-bold text-slate-600">Note:</span>
-                  <p class="text-slate-500 text-sm mt-1">
+                  <span class="font-bold text-neutral-800">Note:</span>
+                  <p class="text-neutral-500 text-sm mt-1">
                     {{ savedDiagnosis.note || "No notes." }}
+                  </p>
+                </div>
+                <div>
+                  <span class="font-bold text-neutral-800">Classification Result By AI</span>
+                  <p class="text-white text-center text-sm mt-1 py-2 px-4 rounded-xl bg-yellow-500 w-fit">
+                    {{ savedDiagnosis.ai_diagnosis || "Benign" }}
                   </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div class="w-full lg:w-72 shrink-0">
+        <!-- Right Sidebar Panel -->
+        <div class="sticky w-full lg:w-72 shrink-0">
           <DiagnosisPanel :patientId="patientId" :patientData="patientData" :aiPrediction="aiPrediction"
             @update:diagnosis="(val) => console.log('Doctor selected:', val)"
             @update:agreement="(val) => (doctorAgreement = val)" />
@@ -381,12 +395,12 @@ const getBrushButtonClass = (type) => {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: tranneutralY(20px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: tranneutralY(0);
   }
 }
 </style>
