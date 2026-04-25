@@ -220,9 +220,8 @@ watch(() => props.gradCamSrc, (newVal) => {
 
 <template>
   <div class="flex flex-col md:flex-row gap-6 justify-center">
-
     <div class="flex flex-col items-center">
-      <div class="rounded-xl overflow-hidden border-4 border-white shadow-lg relative bg-black cursor-crosshair group"
+      <div class="rounded-xl overflow-hidden relative bg-black cursor-crosshair group"
         :style="{ width: width + 'px', height: height + 'px' }">
         <v-stage ref="stageRef" :config="stageConfig" @mousedown="handleMouseDown" @mousemove="handleMouseMove"
           @mouseup="handleMouseUp" @mouseleave="handleMouseUp">
@@ -268,6 +267,5 @@ watch(() => props.gradCamSrc, (newVal) => {
         {{ viewMode }} VIEW
       </p>
     </div>
-
   </div>
 </template>

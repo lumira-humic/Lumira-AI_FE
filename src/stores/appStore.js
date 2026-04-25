@@ -48,7 +48,7 @@ export const useAppStore = defineStore("app", () => {
             }),
         );
 
-        // Keep compatibility while some pages may still expect legacy key.
+        // Keep compatibility while some pages may still expect legacy key
         localStorage.setItem(
             LEGACY_SESSION_KEY,
             JSON.stringify({
@@ -83,7 +83,7 @@ export const useAppStore = defineStore("app", () => {
                 ? { role: resolvedRole }
                 : null;
 
-        // Keep legacy key while old guard/layout code is still being migrated.
+        // Keep legacy key while old guard/layout code is still being migrated
         localStorage.setItem("userRole", profile.value?.role || "");
         localStorage.setItem("userName", profile.value?.name || "");
 

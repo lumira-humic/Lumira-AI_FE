@@ -135,7 +135,7 @@ onMounted(() => {
 <template>
   <div class="min-h-screen bg-[#F2F2F2]">
     <!-- Header -->
-    <header class="bg-linear-to-r from-[#97D2F8] to-[#A8D8F6] rounded-b-[50px] px-3 sm:px-5 py-3 sm:py-4">
+    <header class="bg-linear-to-r from-[#97D2F8] to-[#C2E8FF] rounded-b-[50px] px-3 sm:px-5 py-3 sm:py-4">
       <div class="grid grid-cols-3 items-center">
         <div class="flex col-span-3 lg:col-span-1 items-center gap-3 sm:gap-4">
           <div class="h-14 w-14 rounded-full bg-white/95 shrink-0"></div>
