@@ -3,6 +3,7 @@ import { unwrapApiData } from "@/lib/apiResponse";
 import { getPublicImageUrl } from "./storageService";
 
 
+// GLOBAL WRAP SERVICE
 const getLatestRecord = (patient) => {
   if (!patient?.medical_records || patient.medical_records.length === 0) {
     return null;
@@ -107,7 +108,11 @@ const withFallback = async (primaryCall, fallbackCall) => {
   }
 };
 
+
+
+// MODULE SERVICE
 export const dataService = {
+  // Doctor Service
   async getDoctors() {
     const payload = await withFallback(
       () => getUnwrapped("/users", { params: { role: "doctor", page: 1, limit: 100 } }),
@@ -145,6 +150,9 @@ export const dataService = {
     return true;
   },
 
+
+
+  // Patient Service
   async getPatients(options = {}) {
     const {
       page = 1,
@@ -201,6 +209,9 @@ export const dataService = {
     return true;
   },
 
+
+
+  // Another Services
   async getActivities() {
     const payload = await getUnwrapped("/activities", {
       params: { limit: 10 },
@@ -232,7 +243,6 @@ export const dataService = {
     const params = doctorId ? { doctorId } : {};
     const payload = await withFallback(
       () => getUnwrapped("/stats/doctor", { params }),
-      () => getUnwrapped("/doctors/stats", { params }),
     );
 
     return {

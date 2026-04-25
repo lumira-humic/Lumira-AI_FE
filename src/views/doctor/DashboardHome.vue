@@ -332,19 +332,6 @@ const getAiAnalysisText = (patient) => {
   return { text: "-", class: "text-amber-500" };
 };
 
-const getPatientCode = (patient, index) => {
-  if (patient?.code) {
-    return String(patient.code).padStart(3, "0");
-  }
-
-  const numericValue = Number.parseInt(String(patient?.id || ""), 10);
-  if (Number.isFinite(numericValue) && numericValue > 0) {
-    return String(numericValue).padStart(3, "0");
-  }
-
-  return String(index + 1).padStart(3, "0");
-};
-
 const isLoading = computed(() => {
   return patientsQuery.isPending.value && !patientsQuery.data.value;
 });
@@ -428,11 +415,14 @@ const retryFetch = () => {
           :key="`${patient.id}-${index}`"
           class="grid grid-cols-5 items-center text-sm sm:text-base xl:text-lg rounded-xl bg-white p-4 mt-3"
         >
+          <!-- Code -->
           <div class="col-span-1 flex items-center sm:gap-6 xl:gap-12 pl-2 gap-2">
             <img :src="PatientIcon" alt="Patient" class="w-6 h-6 sm:h-10 sm:w-10 object-contain" />
-            <span class="font-semibold text-neutral-600">P{{ getPatientCode(patient, index) }}</span>
+            <span class="font-semibold text-neutral-600">{{ patient.id || "-" }}</span>
           </div>
+          <!-- Name -->
           <div class="col-span-1 text-center font-semibold text-neutral-600">{{ patient.name || "-" }}</div>
+          <!-- AI Analysis -->
           <div
             class="col-span-1 text-center font-semibold"
             :class="getAiAnalysisText(patient).class"
@@ -448,16 +438,18 @@ const retryFetch = () => {
               {{ getAiAnalysisText(patient).text }}
             </template>
           </div>
+          <!-- Image Cancer -->
           <div class="col-span-1 flex justify-center">
             <span v-if="patient.image" class="font-semibold text-[#2BC11F]">Yes</span>
             <img v-else :src="AttentionIcon" alt="Warning Icon" class="w-4 h-4 sm:h-6 sm:w-6 object-contain" />
           </div>
+          <!-- Hasil Review -->
           <div class="col-span-1 flex justify-center">
             <span v-if="isDoneStatus(patient.review)" class="font-semibold text-[#2BC11F]">Done</span>
             <button
               v-else-if="patient.image"
               @click="openReview(patient.id)"
-              class="rounded-base bg-[#A9DAF9] px-6 py-2 text-base font-semibold text-[#2E6D90] hover:bg-[#96d1f3]"
+              class="cursor-pointer rounded-lg bg-[#A9DAF9] px-6 py-2 text-base font-semibold text-[#0c3449] hover:bg-[#96d1f3]"
             >
               Let's Review
             </button>

@@ -17,6 +17,10 @@ import DashboardDoctor from '@/views/admin/page/DashboardDoctor.vue'
 import DashboardPatient from '@/views/admin/page/DashboardPatient.vue'
 import DoctorDashboardHome from '@/views/doctor/DashboardHome.vue'
 import PatientDashboardHome from '@/views/patient/DashboardHome.vue'
+import PatientChatDoctor from '@/views/patient/ChatDoctor.vue'
+import PatientConsultAI from '@/views/patient/ConsultAI.vue'
+import PatientHistory from '@/views/patient/History.vue'
+import PatientRecordDetail from '@/views/patient/RecordDetail.vue'
 import ReviewConsole from '@/views/doctor/ReviewConsole.vue'
 
 
@@ -71,7 +75,11 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'patient' },
       children: [
         { path: '', redirect: '/patient/dashboard' },
-        { path: 'dashboard', name: 'patient-dashboard', component: PatientDashboardHome }
+        { path: 'dashboard', name: 'patient-dashboard', component: PatientDashboardHome },
+        { path: 'chat-doctor', name: 'patient-chat-doctor', component: PatientChatDoctor },
+        { path: 'consult-ai', name: 'patient-consult-ai', component: PatientConsultAI },
+        { path: 'history', name: 'patient-history', component: PatientHistory },
+        { path: 'records/:recordId', name: 'patient-record-detail', component: PatientRecordDetail, props: true }
       ]
     }
   ]
