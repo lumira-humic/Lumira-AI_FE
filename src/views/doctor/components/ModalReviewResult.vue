@@ -12,33 +12,26 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "download"]);
 
+const REVIEWED_STATUSES = new Set(["APPROVED", "REJECTED", "PENDING", "REVIEWED"]);
+
 const reviewData = computed(() => {
   if (!props.patient?.medical_records?.length) return null;
 
-  const records = [...props.patient.medical_records].sort(
-    (a, b) => (b.id || 0) - (a.id || 0),
-  );
+  const records = [...props.patient.medical_records].sort((a, b) => {
+    const aDate = Date.parse(a?.validated_at || a?.uploaded_at || 0);
+    const bDate = Date.parse(b?.validated_at || b?.uploaded_at || 0);
+    return bDate - aDate;
+  });
 
   const record = records[0];
-  if (record.validation_status !== "VALIDATED") return null;
+  const status = String(record?.validation_status || "").trim().toUpperCase();
+  if (!REVIEWED_STATUSES.has(status)) return null;
 
-  let aiClass = "-";
-  let aiConfidence = 0;
-  try {
-    let parsed = record.ai_diagnosis;
-    if (typeof parsed === "string" && parsed.startsWith("{")) {
-      parsed = JSON.parse(parsed);
-    }
-    if (parsed?.class) {
-      aiClass = parsed.class.charAt(0).toUpperCase() + parsed.class.slice(1);
-      aiConfidence =
-        parsed.confidence && parsed.confidence <= 1
-          ? (parsed.confidence * 100).toFixed(1)
-          : parsed.confidence || 0;
-    }
-  } catch (e) {
-    aiClass = String(record.ai_diagnosis);
-  }
+  let aiClass = record.ai_diagnosis || "-";
+  let aiConfidence =
+  record.ai_confidence && record.ai_confidence <= 1
+    ? (record.ai_confidence * 100).toFixed(1)
+    : record.ai_confidence || 0;
 
   const brushImageUrl = record.doctor_brush_path
     ? getPublicImageUrl(record.doctor_brush_path, "breast-cancer-images")
@@ -75,6 +68,7 @@ const reviewData = computed(() => {
     title="Review Result"
     maxWidth="max-w-2xl"
     @close="$emit('close')"
+    :closeOnBackdrop="false"
   >
     <!-- Main Content -->
     <div v-if="patient && reviewData" class="space-y-5">
@@ -89,7 +83,7 @@ const reviewData = computed(() => {
         />
         <div>
           <h4 class="font-bold text-gray-800">{{ patient.name }}</h4>
-          <p class="text-sm text-gray-500">P00{{ patient.id }}</p>
+          <p class="text-sm text-gray-500">{{ patient.id }}</p>
         </div>
         <div
           class="ml-auto px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700"
@@ -102,7 +96,7 @@ const reviewData = computed(() => {
         <!-- AI Result -->
         <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
           <h5
-            class="font-bold text-gray-600 text-sm mb-3 uppercase tracking-wide"
+            class="font-bold text-gray-800 text-sm mb-3 uppercase tracking-wide"
           >
             AI Prediction
           </h5>
@@ -112,10 +106,9 @@ const reviewData = computed(() => {
               class="font-bold px-2 py-0.5 rounded text-sm"
               :class="{
                 'text-green-600 bg-green-100':
-                  reviewData.aiClass.toLowerCase().includes('benign') ||
-                  reviewData.aiClass.toLowerCase().includes('normal'),
-                'text-red-600 bg-red-100': reviewData.aiClass
-                  .toLowerCase()
+                  reviewData.aiClass?.toLowerCase().includes('benign') ||
+                  reviewData.aiClass?.toLowerCase().includes('normal'),
+                'text-red-600 bg-red-100': reviewData.aiClass?.toLowerCase()
                   .includes('malignant'),
               }"
               >{{ reviewData.aiClass }}</span
@@ -135,7 +128,7 @@ const reviewData = computed(() => {
         <!-- Doctor Result -->
         <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
           <h5
-            class="font-bold text-gray-600 text-sm mb-3 uppercase tracking-wide"
+            class="font-bold text-gray-800 text-sm mb-3 uppercase tracking-wide"
           >
             Doctor's Review
           </h5>
@@ -162,7 +155,7 @@ const reviewData = computed(() => {
       <!-- Images -->
       <div>
         <h5
-          class="font-bold text-gray-600 text-sm mb-3 uppercase tracking-wide"
+          class="font-bold text-gray-800 text-sm mb-3 uppercase tracking-wide"
         >
           Visual Results
         </h5>
@@ -180,41 +173,28 @@ const reviewData = computed(() => {
               />
             </div>
             <span class="text-xs text-gray-500 mt-2 font-semibold"
-              >AI GradCAM</span
+              >Lumira AI</span
             >
           </div>
-          <div v-if="reviewData.brushImage" class="flex flex-col items-center">
+          <div class="flex flex-col items-center">
             <div
               class="w-40 h-40 rounded-xl overflow-hidden border-2 border-gray-200 bg-black"
             >
               <img
+                v-if="reviewData.brushImage"
                 :src="reviewData.brushImage"
-                class="w-full h-full object-contain"
+                class="w-full h-full object-contain rounded-xl"
               />
-            </div>
-            <span class="text-xs text-gray-500 mt-2 font-semibold"
-              >Doctor's Markup</span
-            >
-          </div>
-          <div
-            v-if="
-              !reviewData.gradCamImage &&
-              !reviewData.brushImage &&
-              reviewData.originalImage
-            "
-            class="flex flex-col items-center"
-          >
-            <div
-              class="w-40 h-40 rounded-xl overflow-hidden border-2 border-gray-200 bg-black"
-            >
               <img
-                :src="reviewData.originalImage"
-                class="w-full h-full object-contain"
+                v-else
+                src="@/assets/icons/doctor/icon-imagenoavailable.jpg"
+                class="w-full h-full object-contain rounded-xl"
               />
             </div>
-            <span class="text-xs text-gray-500 mt-2 font-semibold"
-              >Original Image</span
-            >
+
+            <span class="text-xs text-gray-500 mt-2 font-semibold">
+              Doctor's Markup
+            </span>
           </div>
         </div>
       </div>
@@ -225,7 +205,7 @@ const reviewData = computed(() => {
       </div>
       <!-- Timestamp -->
       <div v-if="reviewData.validatedAt" class="text-center">
-        <span class="text-xs text-gray-400"
+        <span class="font-semibold text-xs text-gray-800"
           >Reviewed on {{ reviewData.validatedAt }}</span
         >
       </div>
@@ -238,7 +218,7 @@ const reviewData = computed(() => {
     <template #footer>
       <button
         @click="$emit('download')"
-        class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors font-medium shadow-sm hover:shadow flex items-center gap-2"
+        class="cursor-pointer px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors font-medium shadow-sm hover:shadow flex items-center gap-2"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -257,7 +237,7 @@ const reviewData = computed(() => {
       </button>
       <button
         @click="$emit('close')"
-        class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+        class="cursor-pointer px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
       >
         Close
       </button>
