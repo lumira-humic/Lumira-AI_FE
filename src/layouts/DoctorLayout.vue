@@ -218,14 +218,14 @@ watch(
             class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-6 transition-colors"
             :class="isActive(item) ? 'font-semibold bg-[#C2E8FF]' : 'bg-white font-medium hover:bg-neutral-50'"
           >
-            <div class="flex items-center gap-3">
+            <div class="text-sm flex items-center gap-3">
               <span class="h-8 w-8 flex items-center justify-center">
                 <img :src="item.iconPath" :alt="item.name" class="h-8 w-8 object-contain" />
               </span>
               <span class="font-semibold text-neutral-600">{{ item.name }}</span>
             </div>
             <span
-              v-if="getBadgeValue(item.countKey) > 0"
+              v-if="getBadgeValue(item.countKey) >= 0 && item.name !== 'Dashboard'"
               class="inline-flex min-w-7 justify-center rounded-full bg-[#0099ff] px-2 py-1 text-sm font-bold text-white"
             >
               {{ getBadgeValue(item.countKey) }}
@@ -308,7 +308,7 @@ watch(
               <span class="text-neutral-600">{{ item.name }}</span>
             </div>
             <span
-              v-if="getBadgeValue(item.countKey) > 0"
+              v-if="getBadgeValue(item.countKey) >= 0 && item.name !== 'Dashboard'"
               class="inline-flex min-w-7 justify-center rounded-full bg-[#0099ff] px-2 py-1 text-sm font-bold text-white"
             >
               {{ getBadgeValue(item.countKey) }}

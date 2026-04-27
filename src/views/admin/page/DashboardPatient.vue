@@ -292,7 +292,7 @@ const handleReAnalysis = async () => {
             <span v-else class="text-red-500">No</span>
           </div>
           <div class="col-span-1 text-center font-semibold">
-            <span v-if="patient.review === 'VALIDATED' || patient.review === 'Done'" class="text-[#2BC11F]">Done</span>
+            <span v-if="patient.review === 'APPROVED' || patient.review === 'REVIEWED' || patient.review === 'Done'" class="text-[#2BC11F]">Done</span>
             <span v-else-if="patient.review === 'PENDING' || patient.review === 'Not Yet'" class="text-[#0F79B7]">Not Yet</span>
             <span v-else-if="patient.review === 'REJECTED'" class="text-red-500">Rejected</span>
             <span v-else class="text-neutral-400">-</span>

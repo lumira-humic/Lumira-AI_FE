@@ -1,8 +1,11 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
+import { ChevronLeft } from '@lucide/vue';
 
 import { dataService } from "@/services/dataService.js";
+import { getApiErrorMessage } from "@/lib/apiResponse";
+import { useToast } from "@/composables/useToast";
 import MedicalCanvas from "./components/MedicalCanvas.vue";
 import DiagnosisPanel from "./components/DiagnosisPanel.vue";
 import ImageInputModal from "../../components/common/ImageInputModal.vue";
@@ -10,6 +13,7 @@ import ImageInputModal from "../../components/common/ImageInputModal.vue";
 
 const route = useRoute();
 const props = defineProps(["id"]);
+const toast = useToast();
 
 const patientId = props.id;
 const isEditMode = computed(() => route.query.mode === "edit");
@@ -24,6 +28,7 @@ const doctorDrawings = ref([]);
 const doctorNote = ref("");
 const doctorAgreement = ref(null);
 const isSaved = ref(false);
+const isSubmitting = ref(false);
 
 const savedDiagnosis = ref({ agreement: null, note: null, heatmapImage: null });
 const showImageModal = ref(false);
@@ -78,8 +83,12 @@ onMounted(async () => {
 });
 
 const handleSave = async () => {
+  if (isSubmitting.value) {
+    return;
+  }
+
   if (!doctorAgreement.value) {
-    alert("Please select if you Agree or Disagree with the diagnosis.");
+    toast.warning("Please select if you Agree or Disagree with the diagnosis.");
     return;
   }
 
@@ -87,32 +96,43 @@ const handleSave = async () => {
     ? medicalCanvasRef.value.getStageDataURL()
     : null;
 
-  savedDiagnosis.value = {
-    agreement: doctorAgreement.value,
-    note: doctorNote.value,
-    heatmapImage: heatmapDataURL,
-  };
-
-  if (patientData.value?.latestRecord?.id) {
-    try {
-      await dataService.saveDoctorReview(patientData.value.latestRecord.id, {
-        agreement: doctorAgreement.value,
-        note: doctorNote.value,
-        heatmapImage: heatmapDataURL,
-      });
-    } catch (e) {
-      console.error("Failed to save to DB:", e);
-    }
+  if (!patientData.value?.latestRecord?.id) {
+    toast.error("Medical record not found.");
+    return;
   }
 
-  isSaved.value = true;
-  const container = document.getElementById("workspace-container");
-  if (container) {
-    setTimeout(
-      () =>
-        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" }),
-      100
-    );
+  isSubmitting.value = true;
+
+  try {
+    await dataService.saveDoctorReview(patientData.value.latestRecord.id, {
+      agreement: doctorAgreement.value,
+      note: doctorNote.value,
+      heatmapImage: heatmapDataURL,
+    });
+
+    savedDiagnosis.value = {
+      agreement: doctorAgreement.value,
+      note: doctorNote.value,
+      heatmapImage: heatmapDataURL,
+    };
+
+    isSaved.value = true;
+    toast.success("Diagnosis submitted successfully.");
+
+    const container = document.getElementById("workspace-container");
+    if (container) {
+      setTimeout(
+        () =>
+          container.scrollTo({ top: container.scrollHeight, behavior: "smooth" }),
+        100
+      );
+    }
+  } catch (e) {
+    isSaved.value = false;
+    toast.error(getApiErrorMessage(e, "Failed to submit diagnosis."));
+    console.error("Failed to save to DB:", e);
+  } finally {
+    isSubmitting.value = false;
   }
 };
 const handleImageUpdate = (newSrc) => {
@@ -156,10 +176,17 @@ const getBrushButtonClass = (type) => {
   <div class="h-full w-full flex flex-col overflow-hidden relative">
     <div id="workspace-container" class="flex-1 overflow-y-auto">
       <!-- Header -->
-      <div class="text-center mb-8">
+      <div class="grid grid-cols-3 text-center mb-8">
+        <div class="col-span-1">
+          <button @click="$router.back()" class="cursor-pointer bg-white hover:bg-sky-50 text-sky-700 px-4 py-2 rounded-lg font-bold text-sm border border-sky-300 transition-all flex items-center">
+            <ChevronLeft class="w-4 h-4 mr-1" />
+            Back
+          </button>
+        </div>
         <h1 class="text-2xl font-medium text-slate-600">
           {{ isEditMode ? "Editing" : "Reviewing" }} Case #{{ patientId }}
         </h1>
+        <div class="col-span-1"></div>
       </div>
       <!-- Loader -->
       <div v-if="isLoading" class="flex justify-center p-12">
@@ -332,9 +359,12 @@ const getBrushButtonClass = (type) => {
             </div>
           </div>
           <!-- Action Submit -->
-          <button @click="handleSave"
-            class="cursor-pointer w-full bg-[#0093EE] hover:bg-[#0077cc] text-white font-semibold text-base sm:text-lg py-2 sm:py-3 rounded-xl mb-4">
-            Submit Diagnosis
+          <button
+            @click="handleSave"
+            :disabled="isSubmitting"
+            class="cursor-pointer w-full bg-[#0093EE] hover:bg-[#0077cc] disabled:bg-[#8ec8ea] disabled:cursor-not-allowed text-white font-semibold text-base sm:text-lg py-2 sm:py-3 rounded-xl mb-4"
+          >
+            {{ isSubmitting ? "Submitting..." : "Submit Diagnosis" }}
           </button>
           <div v-if="isSaved" class="bg-white rounded-2xl p-4 mt-10 animate-fade-in-up">
             <h2 class="text-2xl font-bold text-neutral-700 mb-4">
