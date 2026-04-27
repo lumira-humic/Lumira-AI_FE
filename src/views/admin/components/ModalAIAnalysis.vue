@@ -2,7 +2,6 @@
 import { computed } from "vue";
 
 import BaseModal from "@/components/common/BaseModal.vue";
-import { getPublicImageUrl } from "@/services/storageService";
 
 
 const props = defineProps({
@@ -11,9 +10,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close", "reanalyze"]);
-
-import { watch } from "vue";
-import { dataService } from "@/services/dataService.js";
 
 const aiData = computed(() => {
   if (
@@ -82,15 +78,6 @@ const aiData = computed(() => {
     analysis_id: null,
   };
 });
-
-watch(
-  () => props.isOpen,
-  (isOpen) => {
-    if (isOpen && props.patient && aiData.value) {
-      dataService.logAIAnalysis(props.patient.id, aiData.value.text);
-    }
-  }
-);
 </script>
 
 <template>

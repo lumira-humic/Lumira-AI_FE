@@ -45,7 +45,8 @@ const menuItems = [
   },
 ];
 
-const patientName = computed(() => appStore.profile?.name || "Patient");
+const patientName = computed(() => appStore.profile?.name || "Name of Patient");
+const patientId = computed(() => appStore.profile?.id || "ID of Patient");
 const activeRouteName = computed(() => String(route.name || ""));
 
 const isActive = (item) => {
@@ -92,19 +93,29 @@ const confirmLogout = async () => {
   isLoggingOut.value = false;
   router.push("/");
 };
+
+const isChatDoctorPage = computed(() => {
+  return route.name === "patient-chat-doctor" || route.name === "patient-record-detail";
+});
+console.log("pasien id", appStore.profile)
 </script>
 
 <template>
   <div class="flex h-dvh flex-col overflow-hidden bg-white">
     <!-- Header -->
     <header class="w-full rounded-br-4xl bg-[#D9D9D9]">
-      <div class="bg-linear-to-r from-[#97D2F8] to-[#C2E8FF] rounded-b-4xl px-3 py-3 sm:px-5">
+      <div
+        :class="[
+          'bg-linear-to-r from-[#97D2F8] to-[#C2E8FF] px-3 py-3 sm:px-5',
+          isChatDoctorPage ? 'rounded-bl-4xl' : 'rounded-b-4xl'
+        ]"
+      >
         <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
           <div class="flex items-center gap-3">
             <div class="h-14 w-14 rounded-full bg-white/90"></div>
             <div class="min-w-0">
               <p class="truncate text-base font-semibold text-neutral-700">{{ patientName }}</p>
-              <p class="text-xs text-neutral-600">Breast Cancer Analytics</p>
+              <p class="text-xs text-neutral-600">{{ patientId }}</p>
             </div>
           </div>
   

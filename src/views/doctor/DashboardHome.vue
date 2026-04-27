@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/vue-query";
 import { useRoute, useRouter } from "vue-router";
 
 import { dataService } from "@/services/dataService.js";
-import { generateDoctorDummyPatients } from "@/lib/mocks/doctorPatients.mock";
+import { getApiErrorMessage } from "@/lib/apiResponse";
 import ModalReviewResult from "./components/ModalReviewResult.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import Loading from "@/components/common/Loading.vue";
@@ -92,14 +92,19 @@ const resolveAiLabel = (patient) => {
   }
 };
 
+// BE ValidationStatus: PENDING | REVIEWED | APPROVED | REJECTED
+// PENDING   → belum diproses / waiting for review
+// REVIEWED  → dokter sudah review (in review / submitted)
+// APPROVED  → disetujui / done
+// REJECTED  → ditolak / done (tapi ditolak)
 const isPendingStatus = (review) => {
   const status = normalizeReviewStatus(review);
-  return status === "PENDING" || status === "NOT YET" || status === "-" || status === "";
+  return status === "PENDING" || status === "" || status === "-";
 };
 
 const isDoneStatus = (review) => {
   const status = normalizeReviewStatus(review);
-  return status === "REVIEWED" || status === "DONE" || status === "APPROVED";
+  return status === "APPROVED" || status === "REJECTED" || status === "REVIEWED";
 };
 
 const isAttentionCase = (patient) => {
@@ -167,32 +172,7 @@ const serverMeta = computed(() => {
   };
 });
 
-const useDummyMode = computed(() => {
-  return Number(serverMeta.value.total || serverItems.value.length) <= 1;
-});
-
-const dummyPatients = computed(() => {
-  return generateDoctorDummyPatients(serverItems.value[0], 51);
-});
-
-const searchedPatients = computed(() => {
-  if (!useDummyMode.value) {
-    return [...serverItems.value];
-  }
-
-  if (!debouncedSearch.value) {
-    return [...dummyPatients.value];
-  }
-
-  const query = debouncedSearch.value.toLowerCase();
-  return dummyPatients.value.filter((patient) => {
-    return (
-      String(patient.id || "").toLowerCase().includes(query) ||
-      String(patient.code || "").toLowerCase().includes(query) ||
-      String(patient.name || "").toLowerCase().includes(query)
-    );
-  });
-});
+const searchedPatients = computed(() => serverItems.value);
 
 const filteredPatients = computed(() => {
   if (currentFilter.value === "Not Yet") {
@@ -210,9 +190,11 @@ const filteredPatients = computed(() => {
   return searchedPatients.value;
 });
 
-const useLocalPagination = computed(() => {
-  return useDummyMode.value || hasStatusFilter.value;
-});
+// Server handles pagination for "All" view.
+// For filter views (Not Yet / Done / Attention), we fetch all and filter locally
+// because BE doesn't expose status filter on GET /patients.
+const useLocalPagination = computed(() => hasStatusFilter.value);
+
 
 const totalItems = computed(() => {
   if (useLocalPagination.value) {
@@ -223,15 +205,14 @@ const totalItems = computed(() => {
 });
 
 const summaryCounts = computed(() => {
-  const summarySource = useLocalPagination.value ? searchedPatients.value : serverItems.value;
-
   return {
-    all: useLocalPagination.value ? summarySource.length : totalItems.value,
-    waiting: summarySource.filter((patient) => isPendingStatus(patient.review)).length,
-    done: summarySource.filter((patient) => isDoneStatus(patient.review)).length,
-    attention: summarySource.filter((patient) => isAttentionCase(patient)).length,
+    all: Number(serverMeta.value.total || serverItems.value.length),
+    waiting: serverItems.value.filter((p) => isPendingStatus(p.review)).length,
+    done: serverItems.value.filter((p) => isDoneStatus(p.review)).length,
+    attention: serverItems.value.filter((p) => isAttentionCase(p)).length,
   };
 });
+
 
 const sectionConfig = computed(() => {
   if (currentFilter.value === "Not Yet") {
@@ -344,11 +325,8 @@ const isRefreshing = computed(() => {
 });
 
 const errorMessage = computed(() => {
-  if (!patientsQuery.isError.value) {
-    return "";
-  }
-
-  return "Failed to load patients. Please try again.";
+  if (!patientsQuery.isError.value) return "";
+  return getApiErrorMessage(patientsQuery.error.value, "Gagal memuat daftar pasien.");
 });
 
 const openReview = (patientId, mode = "review") => {
@@ -366,45 +344,30 @@ const viewResult = (patient) => {
 };
 
 const downloadResult = async (patient) => {
-  // Get the doctor's brush image (post-review annotated image)
-  let downloadUrl = null;
-  if (patient.medical_records?.length) {
-    const records = [...patient.medical_records].sort(
-      (a, b) => (b.id || 0) - (a.id || 0),
-    );
-    const latest = records[0];
-    if (latest.doctor_brush_path) {
-      const { getPublicImageUrl } = await import("@/services/storageService");
-      downloadUrl = getPublicImageUrl(
-        latest.doctor_brush_path,
-        "breast-cancer-images",
-      );
-    }
-  }
+  // Priority: doctorBrushImage (annotated) → image (scan original)
+  // Both fields are already normalized to public URLs by dataService.normalizePatient
+  const downloadUrl = patient.doctorBrushImage || patient.image || null;
 
   if (!downloadUrl) {
-    downloadUrl = patient.image;
-  }
-
-  if (!downloadUrl) {
-    alert("No reviewed image available to download.");
+    alert("Tidak ada gambar yang tersedia untuk diunduh.");
     return;
   }
 
   try {
     const response = await fetch(downloadUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Patient_P00${patient.id}_ReviewResult.png`;
+    a.download = `Lumira_Patient_${patient.id}_ReviewResult.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
   } catch (err) {
     console.error("Download failed:", err);
-    alert("Failed to download image.");
+    alert("Gagal mengunduh gambar.");
   }
 };
 

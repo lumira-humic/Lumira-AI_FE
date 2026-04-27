@@ -266,13 +266,6 @@ export const dataService = {
     });
   },
 
-  async logAIAnalysis(patientId, result = "Analysis Run") {
-    await httpClient.post("/ai/analysis-log", {
-      patientId,
-      result,
-    });
-  },
-
   async getPatientById(id) {
     const patient = await getUnwrapped(`/patients/${id}`);
     const normalized = normalizePatient(patient);

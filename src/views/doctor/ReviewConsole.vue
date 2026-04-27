@@ -178,7 +178,7 @@ const getBrushButtonClass = (type) => {
       <!-- Header -->
       <div class="grid grid-cols-3 text-center mb-8">
         <div class="col-span-1">
-          <button @click="$router.back()" class="cursor-pointer bg-neutral-100 hover:bg-neutral-200 text-neutral-600 px-4 py-2 rounded-lg font-bold text-sm border border-[#0099ff] transition-all flex items-center">
+          <button @click="$router.back()" class="cursor-pointer bg-white hover:bg-sky-50 text-sky-700 px-4 py-2 rounded-lg font-bold text-sm border border-sky-300 transition-all flex items-center">
             <ChevronLeft class="w-4 h-4 mr-1" />
             Back
           </button>
