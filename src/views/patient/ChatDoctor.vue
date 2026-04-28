@@ -270,9 +270,9 @@ const isInitializing = computed(
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-3">
             <!-- Avatar -->
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 font-bold text-lg">
-              {{ doctorInfo.name?.charAt(0)?.toUpperCase() || "D" }}
-            </div>
+            <div class="h-14 w-14 rounded-full bg-neutral-200 shrink-0 flex items-center justify-center overflow-hidden p-3">
+              <img src="@/assets/icons/icon-doctor.png" alt="Doctor Icon" class="w-full h-full object-contain">
+            </div>  
             <div>
               <p class="text-base font-semibold text-neutral-700">
                 {{ doctorInfo.name }}
@@ -294,7 +294,6 @@ const isInitializing = computed(
           </button>
         </div>
       </div>
-
       <!-- No room assigned yet (after init but no room) -->
       <div
         v-if="!activeRoomId"
@@ -302,7 +301,6 @@ const isInitializing = computed(
       >
         Sesi chat sedang disiapkan. Silakan tunggu sebentar.
       </div>
-
       <!-- Messages -->
       <div
         ref="chatThreadRef"
@@ -315,7 +313,6 @@ const isInitializing = computed(
         >
           <Loading text="Memuat pesan..." />
         </div>
-
         <!-- API error -->
         <div
           v-else-if="messagesError"
@@ -324,7 +321,6 @@ const isInitializing = computed(
           <AlertCircle class="h-4 w-4 shrink-0" />
           {{ messagesError }}
         </div>
-
         <!-- No messages yet -->
         <div
           v-else-if="messages.length === 0 && activeRoomId"
@@ -336,7 +332,6 @@ const isInitializing = computed(
           <p class="text-sm font-semibold text-neutral-600">Belum ada pesan</p>
           <p class="mt-1 text-xs text-neutral-400">Mulai percakapan dengan dokter Anda</p>
         </div>
-
         <!-- Message bubbles + day separators -->
         <template v-else>
           <template v-for="item in messages" :key="item.id">
@@ -346,7 +341,6 @@ const isInitializing = computed(
                 {{ item.dayLabel }}
               </span>
             </div>
-
             <!-- Message bubble -->
             <div
               v-else
@@ -369,7 +363,6 @@ const isInitializing = computed(
           </template>
         </template>
       </div>
-
       <!-- Input area -->
       <div class="shrink-0 rounded-2xl border border-neutral-300 bg-white px-3 py-2 mx-4 mb-4">
         <div class="flex items-center gap-2">
