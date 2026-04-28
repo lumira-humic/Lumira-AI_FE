@@ -13,7 +13,7 @@ import LumiraLogo from "@/assets/images/lumira-logo-img.png";
 const router = useRouter();
 const appStore = useAppStore();
 
-const { portalData, isLoading, isUsingMock, errorMessage, isRefreshing, refetchAll } = usePatientPortalData();
+const { portalData, isLoading, errorMessage, isRefreshing, refetchAll } = usePatientPortalData();
 
 const statusFilter = ref("pending");
 const searchKeyword = ref("");
@@ -96,7 +96,7 @@ const openConsultAI = () => {
 
 
 <template>
-  <section class="relative flex h-full min-h-0 flex-col overflow-hidden rounded-3xl bg-[#F2F2F2] p-3 sm:p-5">
+  <section class="relative flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-5">
     <!-- Background Image -->
     <img
       :src="LumiraLogo"
@@ -109,14 +109,8 @@ const openConsultAI = () => {
     <!-- Main Data -->
     <div v-else class="relative z-10 flex justify-between min-h-0 flex-1 flex-col overflow-y-auto pr-1">
       <!-- Delete this, if API data form BE's ready -->
-      <div class="flex flex-col gap-2">
-        <p v-if="isRefreshing" class="text-xs text-neutral-500">Refreshing patient timeline...</p>
-        <div
-          v-if="isUsingMock"
-          class="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-700"
-        >
-          Preview mode: API data is not fully available yet, dummy patient timeline is shown.
-        </div>
+      <div v-if="isRefreshing" class="flex flex-col gap-2">
+        <p class="text-xs text-neutral-500">Refreshing patient timeline...</p>
       </div>
       <div class="flex flex-col gap-4 overflow-y-auto">
         <!-- If Error -->
@@ -145,7 +139,7 @@ const openConsultAI = () => {
             v-model="searchKeyword"
             placeholder="Search..."
             wrapperClass="max-w-full"
-            customMainClass="py-2"
+            customMainClass="py-2 bg-neutral-100! border border-neutral-300!"
           />
         </div>
         <!-- Status filter -->
@@ -155,7 +149,7 @@ const openConsultAI = () => {
             :key="tab.key"
             type="button"
             @click="statusFilter = tab.key"
-            class="cursor-pointer rounded-full border px-2 py-2 text-xs font-semibold shadow-sm transition sm:text-sm"
+            class="cursor-pointer rounded-full border px-2 py-2 text-xs font-semibold transition sm:text-sm"
             :class="statusFilter === tab.key ? 'border-sky-600 bg-[#1197E8] text-white' : 'border-neutral-300 bg-white text-neutral-500 hover:bg-neutral-100'"
           >
             {{ tab.label }}
@@ -265,15 +259,15 @@ const openConsultAI = () => {
       <!-- Banner Medgemma -->
       <div
         v-if="showMedgemmaPromo"
-        class="rounded-2xl bg-[#1696e5] px-4 py-10 text-white shadow sm:px-6"
+        class="rounded-2xl bg-[#1696e5] p-4 sm:px-4 sm:py-10 text-white shadow sm:px-6"
       >
         <div class="grid gap-4 sm:grid-cols-[84px_1fr] sm:items-center">
-          <div class="mx-auto h-20 w-20">
+          <div class="mx-auto h-12 w-12 sm:h-20 sm:w-20">
             <img :src="LumiraLogo" alt="MedGemma" class="h-full w-full object-contain" />
           </div>
           <div>
             <p class="text-xs font-semibold tracking-wide text-sky-100">{{ portalData.medgemmaPromo.badge }}</p>
-            <p class="text-3xl font-semibold">{{ portalData.medgemmaPromo.title }}</p>
+            <p class="text-xl sm:text-3xl font-semibold">{{ portalData.medgemmaPromo.title }}</p>
             <p class="mt-1 text-sm text-sky-100">{{ portalData.medgemmaPromo.subtitle }}</p>
           </div>
         </div>
@@ -281,7 +275,7 @@ const openConsultAI = () => {
         <button
           type="button"
           @click="openConsultAI"
-          class="mt-10 inline-flex cursor-pointer items-center gap-2 rounded-full bg-white px-4 py-2 text-base font-semibold text-[#0F8FDD] transition hover:bg-sky-100"
+          class="w-full sm:w-fit mt-10 inline-flex cursor-pointer justify-center items-center gap-2 rounded-full bg-white px-4 py-2 text-base font-semibold text-[#0F8FDD] transition hover:bg-sky-100"
         >
           <Sparkles class="h-4 w-4" />
           {{ portalData.medgemmaPromo.cta }}

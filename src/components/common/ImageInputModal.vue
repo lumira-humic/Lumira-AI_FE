@@ -83,7 +83,7 @@ const closeModal = () => {
 
             <div v-if="activeTab === 'url'">
                 <label class="block text-sm font-bold text-slate-700 mb-2">Image URL</label>
-                <input v-model="imageUrl" type="text" placeholder="https://example.com/image.png"
+                <input v-model="imageUrl" type="text"
                     class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-[#0099ff] outline-none text-sm" />
                 <p class="mt-2 text-xs text-slate-400">Paste a direct link to the X-Ray image.</p>
             </div>

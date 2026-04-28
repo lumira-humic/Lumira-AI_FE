@@ -10,10 +10,10 @@ import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import DoctorChatDock from '@/components/doctor/DoctorChatDock.vue'
-import DashboardIcon from '@/assets/admin/dashboard-sidebar.png'
-import DoneIcon from '@/assets/doctor/done.png'
-import WaitingIcon from '@/assets/doctor/waiting-for-review.png'
-import AttentionIcon from '@/assets/doctor/need-attention.png'
+import DashboardIcon from '@/assets/icons/admin/icon-dashboard-sidebar.png'
+import DoneIcon from '@/assets/icons/doctor/icon-filter-done.png'
+import WaitingIcon from '@/assets/icons/doctor/icon-filter-waitingforreview.png'
+import AttentionIcon from '@/assets/icons/doctor/icon-filter-needattention.png'
 
 
 const route = useRoute()
@@ -195,7 +195,9 @@ watch(
     <header class="bg-linear-to-r from-[#97D2F8] to-[#C2E8FF] rounded-b-[50px] px-3 sm:px-5 py-3 sm:py-4">
       <div class="grid grid-cols-3 items-center">
         <div class="flex col-span-3 lg:col-span-1 items-center gap-3 sm:gap-4">
-          <div class="h-14 w-14 rounded-full bg-white/95 shrink-0"></div>
+          <div class="h-14 w-14 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-3">
+            <img src="@/assets/icons/icon-doctor.png" alt="Admin Icon" class="w-full h-full object-contain">
+          </div> 
           <div>
             <p class="text-base font-semibold text-neutral-700">{{ appStore.profile?.name || '-' }}</p>
             <p class="text-xs text-neutral-600">Breast Cancer Analytics</p>
@@ -218,14 +220,14 @@ watch(
             class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-6 transition-colors"
             :class="isActive(item) ? 'font-semibold bg-[#C2E8FF]' : 'bg-white font-medium hover:bg-neutral-50'"
           >
-            <div class="flex items-center gap-3">
+            <div class="text-sm flex items-center gap-3">
               <span class="h-8 w-8 flex items-center justify-center">
                 <img :src="item.iconPath" :alt="item.name" class="h-8 w-8 object-contain" />
               </span>
               <span class="font-semibold text-neutral-600">{{ item.name }}</span>
             </div>
             <span
-              v-if="getBadgeValue(item.countKey) > 0"
+              v-if="getBadgeValue(item.countKey) >= 0 && item.name !== 'Dashboard'"
               class="inline-flex min-w-7 justify-center rounded-full bg-[#0099ff] px-2 py-1 text-sm font-bold text-white"
             >
               {{ getBadgeValue(item.countKey) }}
@@ -252,7 +254,7 @@ watch(
             <Menu class="h-5 w-5" />
           </button>
         </header>
-        <!-- Main Content -->
+        <!-- Data -->
         <div class="flex min-h-0 flex-1 flex-col">
           <div class="min-h-0 flex-1 overflow-hidden">
             <RouterView v-slot="{ Component }">
@@ -308,7 +310,7 @@ watch(
               <span class="text-neutral-600">{{ item.name }}</span>
             </div>
             <span
-              v-if="getBadgeValue(item.countKey) > 0"
+              v-if="getBadgeValue(item.countKey) >= 0 && item.name !== 'Dashboard'"
               class="inline-flex min-w-7 justify-center rounded-full bg-[#0099ff] px-2 py-1 text-sm font-bold text-white"
             >
               {{ getBadgeValue(item.countKey) }}

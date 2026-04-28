@@ -2,7 +2,6 @@
 import { computed } from "vue";
 
 import BaseModal from "@/components/common/BaseModal.vue";
-import { getPublicImageUrl } from "@/services/storageService";
 
 
 const props = defineProps({
@@ -11,9 +10,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close", "reanalyze"]);
-
-import { watch } from "vue";
-import { dataService } from "@/services/dataService.js";
 
 const aiData = computed(() => {
   if (
@@ -82,15 +78,6 @@ const aiData = computed(() => {
     analysis_id: null,
   };
 });
-
-watch(
-  () => props.isOpen,
-  (isOpen) => {
-    if (isOpen && props.patient && aiData.value) {
-      dataService.logAIAnalysis(props.patient.id, aiData.value.text);
-    }
-  }
-);
 </script>
 
 <template>
@@ -99,6 +86,7 @@ watch(
     title="AI Analysis Result"
     maxWidth="max-w-lg"
     @close="$emit('close')"
+    :closeOnBackdrop="false"
   >
     <div v-if="patient" class="space-y-4">
       <div
@@ -211,13 +199,13 @@ watch(
     <template #footer>
       <button
         @click="$emit('reanalyze')"
-        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium shadow-sm hover:shadow"
+        class="cursor-pointer px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium shadow-sm hover:shadow"
       >
         Run Re-Analysis
       </button>
       <button
         @click="$emit('close')"
-        class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+        class="cursor-pointer px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
       >
         Close
       </button>

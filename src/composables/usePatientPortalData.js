@@ -2,17 +2,23 @@ import { computed } from "vue";
 import { useQuery } from "@tanstack/vue-query";
 
 import { dataService } from "@/services/dataService";
+import { chatService } from "@/services/chatService";
 import { getApiErrorMessage } from "@/lib/apiResponse";
-import { createPatientPortalMock } from "@/lib/mocks/patientPortal.mock";
+
+
+// ─────────────────────────────────────────────
+// ValidationStatus enum dari BE:
+//   PENDING   → belum diproses
+//   REVIEWED  → dokter sedang review
+//   APPROVED  → selesai / disetujui
+//   REJECTED  → selesai / ditolak
+// ─────────────────────────────────────────────
 
 const STATUS_KEY_MAP = {
   PENDING: "pending",
-  "NOT YET": "pending",
-  VALIDATED: "done",
-  DONE: "done",
-  REVIEWING: "in_review",
-  IN_REVIEW: "in_review",
-  "IN REVIEW": "in_review",
+  REVIEWED: "in_review",
+  APPROVED: "done",
+  REJECTED: "done",
 };
 
 const statusLabelByKey = {
@@ -23,26 +29,24 @@ const statusLabelByKey = {
 
 const resolveStatusKey = (rawStatus) => {
   const status = String(rawStatus || "").trim().toUpperCase();
-  if (!status) {
-    return "pending";
-  }
-
-  return STATUS_KEY_MAP[status] || "in_review";
+  if (!status) return "pending";
+  return STATUS_KEY_MAP[status] || "pending";
 };
 
+// ─────────────────────────────────────────────
+// Diagnosis payload normalizer
+// BE menyimpan ai_diagnosis sebagai plain string (cth: "Malignant")
+// atau JSON string (cth: '{"class":"Malignant","confidence":0.99}')
+// ─────────────────────────────────────────────
+
 const normalizeDiagnosisPayload = (rawDiagnosis) => {
-  if (!rawDiagnosis) {
-    return { resultLabel: "-", confidence: 0 };
-  }
+  if (!rawDiagnosis) return { resultLabel: "-", confidence: 0 };
 
   const diagnosis = (() => {
-    if (typeof rawDiagnosis !== "string") {
-      return rawDiagnosis;
-    }
-
+    if (typeof rawDiagnosis !== "string") return rawDiagnosis;
     try {
       return JSON.parse(rawDiagnosis);
-    } catch (error) {
+    } catch {
       return { class: rawDiagnosis };
     }
   })();
@@ -50,205 +54,149 @@ const normalizeDiagnosisPayload = (rawDiagnosis) => {
   return {
     resultLabel: String(diagnosis?.class || diagnosis?.label || diagnosis || "-")
       .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase()),
+      .replace(/\b\w/g, (c) => c.toUpperCase()),
     confidence: Number(diagnosis?.confidence || diagnosis?.score || 0),
   };
 };
 
+// ─────────────────────────────────────────────
+// Array helpers
+// ─────────────────────────────────────────────
+
 const resolveMedicalRecords = (patient) => {
-  if (Array.isArray(patient?.medical_records)) {
-    return patient.medical_records;
-  }
-
-  if (Array.isArray(patient?.medicalRecords)) {
-    return patient.medicalRecords;
-  }
-
+  if (Array.isArray(patient?.medical_records)) return patient.medical_records;
+  if (Array.isArray(patient?.medicalRecords)) return patient.medicalRecords;
   return [];
 };
 
-const toComparableDate = (rawDate) => {
-  if (!rawDate) {
-    return 0;
-  }
+// ─────────────────────────────────────────────
+// Date formatters
+// ─────────────────────────────────────────────
 
-  const parsed = new Date(rawDate).getTime();
-  if (Number.isNaN(parsed)) {
-    return 0;
-  }
-
-  return parsed;
+const toTimestamp = (rawDate) => {
+  if (!rawDate) return 0;
+  const t = new Date(rawDate).getTime();
+  return Number.isNaN(t) ? 0 : t;
 };
 
 const formatLongDate = (rawDate) => {
-  const parsed = new Date(rawDate);
-  if (Number.isNaN(parsed.getTime())) {
-    return "-";
-  }
-
-  return parsed.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const d = new Date(rawDate);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 };
 
 const formatShortDate = (rawDate) => {
-  const parsed = new Date(rawDate);
-  if (Number.isNaN(parsed.getTime())) {
-    return "-";
-  }
-
-  return parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-  });
+  const d = new Date(rawDate);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
 };
 
-const formatClock = (rawDate) => {
-  const parsed = new Date(rawDate);
-  if (Number.isNaN(parsed.getTime())) {
-    return "-";
-  }
 
-  return parsed.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+// ─────────────────────────────────────────────
+// Main portal builder
+// Builds all UI data from the raw BE response of GET /patients/:id
+//
+// BE response shape (data field):
+//   id, name, email, phone, address,
+//   image (cloudinary URL),
+//   aiGradCamImage (cloudinary URL),
+//   doctorBrushImage (cloudinary URL),
+//   latestRecord { id, patient_id, original_image_path, validation_status,
+//                  ai_diagnosis, ai_confidence, ai_gradcam_path,
+//                  doctor_diagnosis, doctor_notes, doctor_brush_path,
+//                  uploaded_at, validated_at },
+//   medical_records[] — same shape as latestRecord
+// ─────────────────────────────────────────────
 
 const buildPortalFromApi = (patient, profile) => {
-  const records = resolveMedicalRecords(patient)
+  const rawRecords = resolveMedicalRecords(patient);
+
+  const records = rawRecords
     .map((record) => {
-      const diagnosis = normalizeDiagnosisPayload(record?.ai_diagnosis || record?.aiDiagnosis);
-      const statusKey = resolveStatusKey(record?.validation_status || record?.validationStatus);
-      const createdAt = record?.created_at || record?.createdAt || patient?.updated_at || patient?.updatedAt;
-      const reviewedAt = record?.updated_at || record?.updatedAt || createdAt;
+      const diagnosis = normalizeDiagnosisPayload(record?.ai_diagnosis);
+      const statusKey = resolveStatusKey(record?.validation_status);
+
+      // uploaded_at = waktu pasien upload gambar (createdAt surrogate)
+      // validated_at = waktu dokter review selesai
+      const uploadedAt = record?.uploaded_at ?? null;
+      const validatedAt = record?.validated_at ?? null;
 
       return {
-        id: String(record?.id || crypto.randomUUID()),
+        id: record?.id ?? null,
         statusKey,
-        statusLabel: statusLabelByKey[statusKey],
-        scanId: `#USG-${String(record?.id || patient?.id || "00000").slice(0, 5).toUpperCase()}`,
-        doctorName:
-          record?.reviewedBy?.name ||
-          record?.doctor?.name ||
-          record?.validator?.name ||
-          "Assigned Doctor",
-        title:
-          statusKey === "pending"
-            ? "Please wait, we are processing your data"
-            : statusKey === "in_review"
-              ? "Your scan is currently reviewed by doctor"
-              : "Final review has been completed",
-        note: record?.doctor_note || record?.doctorNote || "No doctor note yet.",
-        createdAt,
-        verifiedDateLabel: statusKey === "done" ? formatLongDate(reviewedAt) : "",
+        statusLabel: statusLabelByKey[statusKey] ?? "Unknown",
+        note: record?.doctor_notes || "-",
+        uploadedAt,
+        validatedAt,
+        uploadedDateLabel: formatShortDate(uploadedAt),
+        verifiedDateLabel: statusKey === "done" ? formatLongDate(validatedAt) : "",
         confidence: diagnosis.confidence,
         aiResultLabel: diagnosis.resultLabel,
-        imageUrl: record?.original_image_path || record?.originalImagePath || patient?.image || "",
+        imageUrl: record?.original_image_path || patient?.image || "",
+        doctorName: null,
       };
     })
-    .sort((a, b) => toComparableDate(b.createdAt) - toComparableDate(a.createdAt));
+    // Sort by uploadedAt DESC (terbaru dulu)
+    .sort((a, b) => toTimestamp(b.uploadedAt) - toTimestamp(a.uploadedAt));
 
-  const latestRecord = records[0] || null;
+  const latestRecord = records[0] ?? null;
 
-  const doctorChatMessages = [
-    {
-      id: "doc-api-1",
-      dayLabel: latestRecord?.createdAt ? formatLongDate(latestRecord.createdAt) : "Today",
-      from: "patient",
-      text: "Bagaimana hasilnya dok?",
-      time: latestRecord?.createdAt ? formatClock(latestRecord.createdAt) : "09:00",
-    },
-    {
-      id: "doc-api-2",
-      from: "doctor",
-      text:
-        latestRecord?.statusKey === "done"
-          ? "Review final sudah tersedia, silakan buka detail report untuk melihat ringkasan hasil."
-          : "Hasil anda masih dalam proses review, kami akan update segera.",
-      time: latestRecord?.createdAt ? formatClock(latestRecord.createdAt) : "09:10",
-    },
-  ];
-
-  const aiChatMessages = [
-    {
-      id: "ai-api-1",
-      dayLabel: "Today",
-      from: "patient",
-      text: "Apa arti hasil saya?",
-      time: "08:00",
-    },
-    {
-      id: "ai-api-2",
-      from: "assistant",
-      text:
-        latestRecord?.aiResultLabel && latestRecord.aiResultLabel !== "-"
-          ? `Berdasarkan data terbaru, hasil AI mengarah ke ${latestRecord.aiResultLabel}. Tetap ikuti konfirmasi dokter.`
-          : "Belum ada hasil AI final. Silakan tunggu update dari dokter.",
-      time: "08:01",
-    },
-  ];
-
+  // diagnosisHistory: untuk section "Riwayat Diagnosis" di History.vue
   const diagnosisHistory = records.slice(0, 6).map((record) => ({
-    id: `diag-${record.id}`,
-    code: record.scanId,
-    title: "Breast Ultrasound",
-    performedDateLabel: formatShortDate(record.createdAt),
-    resultLabel: record.aiResultLabel?.toUpperCase() || "PENDING",
+    id: record.id,
+    performedDateLabel: formatShortDate(record.uploadedAt),
+    validatedDateLabel: record.statusKey === "done" ? formatShortDate(record.validatedAt) : "-",
+    resultLabel: record.aiResultLabel.toUpperCase() || "PENDING",
     resultTone: record.statusKey === "done" ? "green" : "sky",
     recordId: record.id,
-  }));
-
-  const doctorChatHistory = records.slice(0, 6).map((record) => ({
-    id: `chat-${record.id}`,
-    doctorName: record.doctorName,
-    specialty: "Radiology Team",
-    relatedCode: record.scanId,
-    dateLabel: formatShortDate(record.createdAt),
   }));
 
   return {
     patientProfile: {
       name: profile?.name || patient?.name || "Patient",
       subtitle: "Breast Cancer Analytics",
-      patientIdLabel: `ID: #${String(patient?.id || "UNKNOWN").slice(0, 10).toUpperCase()}`,
-      scanDateLabel: latestRecord?.createdAt ? `Scan Date: ${formatShortDate(latestRecord.createdAt)}` : "Scan Date: -",
-      defaultScanId: latestRecord?.scanId || "#USG-00000",
-      verifiedBy: latestRecord?.doctorName || "Assigned Doctor",
+      patientIdLabel: `ID: #${String(patient?.id || "UNKNOWN").slice(0, 12).toUpperCase()}`,
+      scanDateLabel: latestRecord?.uploadedAt
+        ? `Scan Date: ${formatShortDate(latestRecord.uploadedAt)}`
+        : "Scan Date: -",
+      defaultScanId: latestRecord?.id ?? null,
+      verifiedBy: null
     },
     statusRecords: records,
     activeDoctor: {
-      name: latestRecord?.doctorName || "Assigned Doctor",
+      name: null,
       subtitle: "Breast Cancer Analytics",
-      activeLabel: "Active recently",
+      activeLabel: null,
     },
-    doctorChatMessages,
     aiAssistant: {
       name: "MedGemma Assistant",
       subtitle: "AI Consultation",
     },
-    aiChatMessages,
     diagnosisHistory,
-    doctorChatHistory,
+    doctorChatHistory: [],
     medgemmaPromo: {
       title: "Let's Talk with AI Assistant (MedGemma)",
-      subtitle: "Get instant answer to your medical concerns and preparation steps while our radiologists review your scan",
+      subtitle:
+        "Get instant answer to your medical concerns and preparation steps while our radiologists review your scan",
       badge: "WHILE YOU WAIT...",
       cta: "Consult Now",
     },
     detailFallback: {
-      confidence: latestRecord?.confidence || 0,
-      resultLabel: latestRecord?.aiResultLabel || "-",
-      note: latestRecord?.note || "No doctor note yet.",
-      verifiedDateLabel: latestRecord?.verifiedDateLabel || "-",
+      confidence: latestRecord?.confidence ?? 0,
+      resultLabel: latestRecord?.aiResultLabel ?? "-",
+      note: latestRecord?.note ?? "-",
+      verifiedDateLabel: latestRecord?.verifiedDateLabel ?? "-",
     },
   };
 };
 
+
+// ─────────────────────────────────────────────
+// Composable export
+// ─────────────────────────────────────────────
+
 export const usePatientPortalData = () => {
+  // Step 1: GET /auth/me — current patient profile
   const currentUserQuery = useQuery({
     queryKey: ["patient-current-user"],
     queryFn: () => dataService.getCurrentUser(),
@@ -257,15 +205,15 @@ export const usePatientPortalData = () => {
     retry: 1,
   });
 
-  const patientId = computed(() => {
-    return (
-      currentUserQuery.data.value?.id ||
-      currentUserQuery.data.value?.patientId ||
-      currentUserQuery.data.value?.sub ||
-      ""
-    );
-  });
+  // Step 2: patient id dari auth/me
+  const patientId = computed(() =>
+    currentUserQuery.data.value?.id ||
+    currentUserQuery.data.value?.patientId ||
+    currentUserQuery.data.value?.sub ||
+    "",
+  );
 
+  // Step 3: GET /patients/:id — full patient detail + medical_records
   const patientDetailQuery = useQuery({
     queryKey: computed(() => ["patient-self-detail", patientId.value]),
     queryFn: () => dataService.getPatientById(patientId.value),
@@ -275,75 +223,68 @@ export const usePatientPortalData = () => {
     retry: 1,
   });
 
-  const apiRecordCount = computed(() => {
-    const detail = patientDetailQuery.data.value;
-    return resolveMedicalRecords(detail).length;
+  // Step 4: GET /chat/rooms — room list untuk "Riwayat Chat Dokter"
+  const chatRoomsQuery = useQuery({
+    queryKey: ["patient-chat-rooms"],
+    queryFn: () => chatService.listRooms(),
+    enabled: computed(() => Boolean(patientId.value)),
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 5,
+    retry: 1,
   });
 
-  const isUsingMock = computed(() => {
-    if (apiRecordCount.value > 0) {
-      return false;
-    }
-
-    if (patientDetailQuery.isError.value) {
-      return true;
-    }
-
-    if (currentUserQuery.isSuccess.value && !patientId.value) {
-      return true;
-    }
-
-    if (patientDetailQuery.isSuccess.value && apiRecordCount.value === 0) {
-      return true;
-    }
-
-    return false;
-  });
-
+  // Portal data dibangun dari patient detail
   const portalData = computed(() => {
-    if (!isUsingMock.value && patientDetailQuery.data.value) {
-      return buildPortalFromApi(
-        patientDetailQuery.data.value,
-        currentUserQuery.data.value,
-      );
-    }
+    const base = buildPortalFromApi(
+      patientDetailQuery.data.value ?? null,
+      currentUserQuery.data.value ?? null,
+    );
 
-    return createPatientPortalMock(currentUserQuery.data.value);
+    // Inject doctorChatHistory dari chat rooms
+    const rawRooms = Array.isArray(chatRoomsQuery.data.value)
+      ? chatRoomsQuery.data.value
+      : [];
+
+    const doctorChatHistory = rawRooms.map((room) => ({
+      id: room.id,
+      doctorName: room.counterpartName ?? "-",
+      lastMessagePreview: room.lastMessagePreview ?? null,
+      activityText: room.counterpartActivityText ?? "",
+      relatedRecordId: room.medicalRecordId ?? null,
+      dateLabel: room.lastMessageAt ? formatShortDate(room.lastMessageAt) : "-",
+    }));
+
+    return { ...base, doctorChatHistory };
   });
 
   const isLoading = computed(() => {
-    if (currentUserQuery.isPending.value) {
-      return true;
-    }
-
+    if (currentUserQuery.isPending.value) return true;
     if (patientId.value && patientDetailQuery.isPending.value && !patientDetailQuery.data.value) {
       return true;
     }
-
     return false;
   });
 
-  const isRefreshing = computed(() => {
-    return currentUserQuery.isFetching.value || patientDetailQuery.isFetching.value;
-  });
+  const isRefreshing = computed(() =>
+    currentUserQuery.isFetching.value ||
+    patientDetailQuery.isFetching.value ||
+    chatRoomsQuery.isFetching.value,
+  );
 
   const errorMessage = computed(() => {
     if (currentUserQuery.isError.value) {
       return getApiErrorMessage(currentUserQuery.error.value, "Failed to load current patient profile.");
     }
-
-    if (patientDetailQuery.isError.value && !isUsingMock.value) {
+    if (patientDetailQuery.isError.value) {
       return getApiErrorMessage(patientDetailQuery.error.value, "Failed to load patient records.");
     }
-
     return "";
   });
 
   const refetchAll = async () => {
     await currentUserQuery.refetch();
-
     if (patientId.value) {
-      await patientDetailQuery.refetch();
+      await Promise.all([patientDetailQuery.refetch(), chatRoomsQuery.refetch()]);
     }
   };
 
@@ -351,7 +292,6 @@ export const usePatientPortalData = () => {
     portalData,
     isLoading,
     isRefreshing,
-    isUsingMock,
     errorMessage,
     refetchAll,
   };

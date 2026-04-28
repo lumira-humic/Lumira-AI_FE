@@ -8,9 +8,9 @@ import { dataService } from '@/services/dataService'
 import { useAppStore } from '@/stores/appStore'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
-import DashboardIcon from '@/assets/admin/dashboard-sidebar.png'
-import DoctorIcon from '@/assets/admin/doctor.png'
-import PatientIcon from '@/assets/admin/patient.png'
+import DashboardIcon from '@/assets/icons/admin/icon-dashboard-sidebar.png'
+import DoctorIcon from '@/assets/icons/icon-doctor.png'
+import PatientIcon from '@/assets/icons/icon-patient.png'
 
 
 const route = useRoute()
@@ -133,87 +133,85 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F2F2F2]">
+  <div class="flex h-dvh flex-col overflow-hidden bg-[#EAEAEA]">
     <!-- Header -->
-    <header class="bg-linear-to-r from-[#97D2F8] to-[#C2E8FF] rounded-b-[50px] px-3 sm:px-5 py-3 sm:py-4">
+    <header class="bg-linear-to-r from-[#97D2F8] to-[#C2E8FF] rounded-b-[50px] px-3 sm:px-5 py-3 sm:py-4 shrink-0">
       <div class="grid grid-cols-3 items-center">
         <div class="flex col-span-3 lg:col-span-1 items-center gap-3 sm:gap-4">
-          <div class="h-14 w-14 rounded-full bg-white/95 shrink-0"></div>
+          <div class="h-14 w-14 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-3">
+            <img src="@/assets/icons/admin/icon-admin.png" alt="Admin Icon" class="w-full h-full object-contain">
+          </div>  
           <div>
-            <p class="text-base font-semibold text-neutral-700">Admin Dashboard</p>
-            <p class="text-xs text-neutral-600">Breast Cancer Analytics</p>
+            <p class="text-base font-semibold text-neutral-700">{{ appStore.profile?.name || 'Administrator' }}</p>
           </div>
         </div>
         <div class="hidden lg:flex lg:col-span-1 justify-center">
-          <p class="text-lg font-semibold text-neutral-600">Leading-edge technology for better diagnosis</p>
+          <p class="text-lg font-semibold text-neutral-600">{{ pageTitle }}</p>
         </div>
       </div>
     </header>
     <!-- Main Content -->
-    <div class="px-3 sm:px-5 pt-6 sm:pt-10">
-      <div class="flex gap-8">
-        <!-- Left Sidebar/Content -->
-        <aside class="hidden lg:flex w-64 shrink-0 flex-col">
-          <h1 class="hidden lg:block mb-18 text-xl xl:text-2xl font-semibold text-gray-700">
-            {{ pageTitle }}
-          </h1>
-          <nav class="space-y-3">
-            <router-link
-              v-for="item in menuItems"
-              :key="item.path"
-              :to="item.path"
-              class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-6 transition-colors"
-              :class="isActive(item.path) ? 'font-semibold bg-[#C2E8FF]' : 'font-medium hover:bg-neutral-50'"
-            >
-              <div class="flex items-center gap-3">
+    <div class="flex min-h-0 flex-1 gap-8 p-3 sm:px-5 pt-4 sm:pt-10">
+      <!-- Left Sidebar -->
+      <aside class="hidden lg:flex w-64 shrink-0 flex-col min-h-0">
+        <nav class="space-y-3">
+          <router-link
+            v-for="item in menuItems"
+            :key="item.path"
+            :to="item.path"
+            class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-6 transition-colors"
+            :class="isActive(item.path) ? 'font-semibold bg-[#C2E8FF]' : 'bg-white font-medium hover:bg-neutral-50'"
+          >
+            <div class="flex items-center gap-3">
+              <span class="h-8 w-8 flex items-center justify-center">
                 <img :src="item.image" :alt="item.name" class="h-8 w-8 object-contain" />
-                <span class="text-neutral-600">{{ item.name }}</span>
-              </div>
-              <span
-                v-if="getBadgeValue(item.badgeKey) > 0"
-                class="inline-flex min-w-7 justify-center rounded-full bg-[#0099ff] px-2 py-1 text-sm font-bold text-white"
-              >
-                {{ getBadgeValue(item.badgeKey) }}
               </span>
-            </router-link>
-          </nav>
-          <!-- Logout Button -->
-          <div class="mt-auto pt-4">
-            <button
-              @click="handleLogoutClick"
-              :disabled="isLoggingOut"
-              class="cursor-pointer flex w-full items-center gap-2 rounded-xl sm:rounded-2xl border-2 border-neutral-400 bg-white px-5 py-5 text-left text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+              <span class="font-semibold text-neutral-600">{{ item.name }}</span>
+            </div>
+            <span
+              v-if="getBadgeValue(item.badgeKey) > 0"
+              class="inline-flex min-w-7 justify-center rounded-full bg-[#0099ff] px-2 py-1 text-sm font-bold text-white"
             >
-              <img src="@/assets/icons/logout-icon.png" alt="Logout Icon" class="h-7 w-7" />
-              <span class="text-sm sm:text-base font-semibold">Log Out</span>
-            </button>
-          </div>
-        </aside>
-        <!-- Main Data -->
-        <main class="min-w-0 flex-1">
-          <!-- Filter -->
-          <header class="mb-4 flex items-center justify-between lg:hidden">
-            <h1 class="block lg:hidden text-xl font-semibold text-gray-700">
-              {{ pageTitle }}
-            </h1>
-            <button @click="toggleSidebar" class="rounded-lg border border-neutral-300 bg-white p-2 text-neutral-600 cursor-pointer">
-              <Menu class="h-5 w-5" />
-            </button>
-          </header>
-          <!-- Table -->
-          <div class="h-[calc(100vh-9rem)] overflow-hidden flex flex-col">
+              {{ getBadgeValue(item.badgeKey) }}
+            </span>
+          </router-link>
+        </nav>
+        <!-- Logout Button -->
+        <div class="mt-auto pt-4">
+          <button
+            @click="handleLogoutClick"
+            :disabled="isLoggingOut"
+            class="cursor-pointer flex w-full items-center gap-3 rounded-2xl border-2 border-neutral-400 bg-white px-5 py-5 text-left text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <img src="@/assets/icons/logout-icon.png" alt="Logout Icon" class="h-7 w-7" />
+            <span class="font-semibold">Log Out</span>
+          </button>
+        </div>
+      </aside>
+      <!-- Main Data -->
+      <main class="min-w-0 flex min-h-0 flex-1 flex-col">
+        <!-- Mobile header -->
+        <header class="mb-4 flex items-center justify-between lg:hidden shrink-0">
+          <p class="text-lg font-bold text-neutral-700">Admin Dashboard</p>
+          <button @click="toggleSidebar" class="cursor-pointer rounded-lg border border-neutral-300 bg-white p-2 text-neutral-600">
+            <Menu class="h-5 w-5" />
+          </button>
+        </header>
+        <!-- Main Content -->
+        <div class="flex min-h-0 flex-1 flex-col">
+          <div class="min-h-0 flex-1 overflow-hidden">
             <RouterView />
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
-    <!-- Right Sidebar/Content If tobe small screen -->
+    <!-- Mobile Sidebar Drawer -->
     <div v-if="isSidebarOpen" class="fixed inset-0 z-50 flex lg:hidden">
       <div class="absolute inset-0 bg-black/40" @click="isSidebarOpen = false"></div>
-      <div class="relative ml-auto flex h-full w-72 flex-col bg-[#F2F2F2] p-4">
+      <div class="relative ml-auto flex h-full w-72 flex-col bg-[#EAEAEA] p-4">
         <button
           @click="isSidebarOpen = false"
-          class="mb-4 ml-auto rounded-lg border border-neutral-300 bg-white p-2 text-neutral-600 cursor-pointer"
+          class="cursor-pointer mb-4 ml-auto rounded-lg border border-neutral-300 bg-white p-2 text-neutral-600"
         >
           <X class="h-5 w-5" />
         </button>
@@ -225,7 +223,7 @@ onMounted(() => {
             :to="item.path"
             @click="isSidebarOpen = false"
             class="flex items-center justify-between rounded-2xl border-2 border-neutral-400 px-4 py-4"
-            :class="isActive(item.path) ? 'font-semibold bg-[#C2E8FF]' : 'font-medium hover:bg-neutral-50'"
+            :class="isActive(item.path) ? 'font-semibold bg-[#C2E8FF]' : 'bg-white font-medium hover:bg-neutral-50'"
           >
             <div class="flex items-center gap-3">
               <img :src="item.image" :alt="item.name" class="h-8 w-8 object-contain" />
@@ -244,10 +242,10 @@ onMounted(() => {
           <button
             @click="() => { handleLogoutClick(); isSidebarOpen = false }"
             :disabled="isLoggingOut"
-            class="cursor-pointer flex w-full items-center gap-2 rounded-xl sm:rounded-2xl border-2 border-neutral-400 bg-white px-5 py-5 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            class="cursor-pointer flex w-full items-center gap-3 rounded-2xl border-2 border-[#A8A8A8] bg-red-50 px-5 py-5 text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <img src="@/assets/icons/logout-icon.png" alt="Logout Icon" class="h-7 w-7" />
-            <span class="font-semibold text-sm">Log Out</span>
+            <span class="font-semibold">Log Out</span>
           </button>
         </div>
       </div>

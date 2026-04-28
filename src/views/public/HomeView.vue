@@ -45,7 +45,7 @@ const handleStartNow = () => {
       <div class="max-w-378 mx-auto px-6 sm:px-8 xl:px-11 relative z-10">
         <!-- Doctor Image (Overlaying Hero and Features and How It Works) -->
         <div class="hidden lg:block absolute -bottom-38 right-0 w-190 z-1 pointer-events-none">
-          <img src="@/assets/images/doctor.png" alt="Doctor" class="w-full h-auto" />
+          <img src="@/assets/images/image-banner-doctor.png" alt="Doctor" class="w-full h-auto" />
         </div>
         <!-- Header -->
         <div class="mb-12 text-center relative z-20">
