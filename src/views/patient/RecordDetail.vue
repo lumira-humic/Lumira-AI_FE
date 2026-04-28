@@ -23,20 +23,24 @@ const selectedRecord = computed(() => {
   );
 });
 
-// confidence: sudah di-normalize ke angka 0-1 dari ai_confidence (mis. 0.9999..)
-// Kalau lebih dari 1 artinya sudah dalam persen, kita clamp ke 100
 const confidenceLabel = computed(() => {
-  const raw = Number(selectedRecord.value?.confidence || portalData.value.detailFallback.confidence || 0);
-  const pct = raw > 1 ? Math.min(raw, 100) : Math.min(raw * 100, 100);
-  return `${pct.toFixed(1)}%`;
+  const raw = Number(
+    selectedRecord.value?.confidence ||
+    portalData.value.detailFallback.confidence ||
+    0
+  );
+
+  let pct = raw > 1 ? Math.min(raw, 100) : Math.min(raw * 100, 100);
+  pct = Math.floor(pct * 100) / 100;
+  if (pct === 100) return "100%";
+
+  return `${pct.toFixed(2).padStart(5, "0")}%`;
 });
 
 const aiResultLabel = computed(() => {
   return selectedRecord.value?.aiResultLabel || portalData.value.detailFallback.resultLabel || "-";
 });
 
-// note dari BE adalah doctor_notes (bukan doctor_note)
-// sudah di-normalize ke field "note" di composable
 const doctorNote = computed(() => {
   return selectedRecord.value?.note || portalData.value.detailFallback.note || "-";
 });
@@ -49,7 +53,6 @@ const doctorNote = computed(() => {
       alt="Lumira watermark"
       class="pointer-events-none absolute inset-0 m-auto hidden w-[42%] max-w-md opacity-10 sm:block"
     />
-
     <div v-if="isLoading" class="flex min-h-0 flex-1 items-center justify-center">
       <Loading text="Loading detail report..." />
     </div>
@@ -86,17 +89,15 @@ const doctorNote = computed(() => {
               <p class="text-xs uppercase tracking-wide mb-1 text-neutral-500">Patient File</p>
               <p class="text-4xl font-bold text-neutral-800">{{ portalData.patientProfile.name }}</p>
               <div class="flex gap-2 items-center mt-2">
-                <p class="text-sm text-neutral-800 font-semibold px-3 py-1 rounded-full bg-neutral-200">{{ portalData.patientProfile.patientIdLabel }}</p>
+                <p class="text-sm text-neutral-800 font-semibold px-3 py-1 rounded-full bg-neutral-200">{{ selectedRecord.id }}</p>
                 <Circle class="w-2 h-2 text-neutral-400 bg-neutral-400 rounded-full"/>
-                <p class="text-sm text-neutral-600">{{ portalData.patientProfile.scanDateLabel }}</p>
+                <p class="text-sm text-neutral-600">{{ selectedRecord.verifiedDateLabel }}</p>
               </div>
             </div>
-
             <div class="inline-flex items-center gap-2 rounded-lg bg-sky-100 px-3 py-2 text-sm font-semibold text-sky-700 border border-sky-500">
               <BadgeCheck class="h-4 w-4" />
-              VERIFIED BY {{ selectedRecord.doctorName || portalData.patientProfile.verifiedBy || "-" }}
+              VERIFIED BY {{ selectedRecord.doctorName || "-" }}
             </div>
-
             <div class="overflow-hidden rounded-2xl border border-neutral-200 mt-4">
               <img
                 v-if="selectedRecord.imageUrl"
@@ -139,9 +140,10 @@ const doctorNote = computed(() => {
                 Doctor's Note
               </div>
               <p class="text-sm leading-relaxed text-neutral-600">{{ doctorNote }}</p>
-
               <div class="mt-4 flex items-center gap-3">
-                <div class="h-9 w-9 rounded-full bg-neutral-300"></div>
+                <div class="h-9 w-9 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-2">
+                  <img src="@/assets/icons/icon-doctor.png" alt="Patient Icon" class="w-full h-full object-contain">
+                </div>
                 <div>
                   <p class="text-xs font-semibold text-sky-600">{{ selectedRecord.doctorName || portalData.patientProfile.verifiedBy || "-" }}</p>
                 </div>
@@ -150,7 +152,6 @@ const doctorNote = computed(() => {
           </div>
         </div>
       </template>
-
       <div v-else class="rounded-xl bg-neutral-100 px-4 py-12 text-center text-neutral-500">
         No report selected.
       </div>

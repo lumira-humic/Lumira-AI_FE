@@ -13,14 +13,8 @@ const router = useRouter();
 const appStore = useAppStore();
 const { portalData, isLoading } = usePatientPortalData();
 
-// diagnosisHistory: dari medical_records via buildPortalFromApi
-// fields: { id, performedDateLabel, validatedDateLabel, resultLabel, resultTone, recordId }
 const diagnosisRecords = computed(() => portalData.value.diagnosisHistory ?? []);
-
-// doctorChatHistory: dari GET /chat/rooms via chatRoomsQuery
-// fields: { id, doctorName, lastMessagePreview, activityText, relatedRecordId, dateLabel }
 const doctorChats = computed(() => portalData.value.doctorChatHistory ?? []);
-
 const showMedgemmaPromo = computed(() => appStore.featureToggles.medgemmaEnabled);
 
 const toneClass = (tone) => {
@@ -44,24 +38,24 @@ const openConsultAI = () => {
 
 <template>
   <section class="relative flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-5">
+    <!-- Background Image -->
     <img
       :src="LumiraLogo"
       alt="Lumira watermark"
       class="pointer-events-none absolute inset-0 m-auto hidden w-[42%] max-w-md opacity-10 sm:block"
     />
-
+    <!-- Loading -->
     <div v-if="isLoading" class="flex min-h-0 flex-1 items-center justify-center">
       <Loading text="Loading patient history..." />
     </div>
-
+    <!-- Main Data -->
     <div v-else class="relative z-10 flex min-h-0 flex-1 flex-col justify-between gap-5 overflow-y-auto pr-1">
+      <!-- Main Content -->
       <div class="flex flex-col gap-6">
-
-        <!-- ── Riwayat Diagnosis ────────────────────────────── -->
+        <!-- Riwayat Diagnosis -->
         <section>
           <h2 class="text-xl font-bold text-neutral-800">Riwayat Diagnosis</h2>
           <p class="text-sm uppercase tracking-wide text-neutral-500">Archival records</p>
-
           <!-- Empty state -->
           <div
             v-if="diagnosisRecords.length === 0"
@@ -69,7 +63,6 @@ const openConsultAI = () => {
           >
             Belum ada data diagnosis tersedia.
           </div>
-
           <div v-else class="mt-3 flex gap-3 overflow-x-auto pb-2">
             <article
               v-for="record in diagnosisRecords"
@@ -113,12 +106,10 @@ const openConsultAI = () => {
             </article>
           </div>
         </section>
-
-        <!-- ── Riwayat Chat Dokter ─────────────────────────── -->
+        <!-- Riwayat Chat Dokter -->
         <section>
           <h2 class="text-xl font-bold text-neutral-800">Riwayat Chat Dokter</h2>
           <p class="text-sm uppercase tracking-wide text-neutral-500">Previous consultations</p>
-
           <!-- Empty state -->
           <div
             v-if="doctorChats.length === 0"
@@ -136,10 +127,10 @@ const openConsultAI = () => {
               class="cursor-pointer min-w-[300px] sm:min-w-[340px] flex-shrink-0 rounded-2xl border border-neutral-300 bg-white p-4 transition hover:border-sky-300"
             >
               <div class="flex items-center gap-3">
-                <!-- Avatar inisial dokter -->
-                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 font-bold text-lg">
-                  {{ chat.doctorName?.charAt(0)?.toUpperCase() || 'D' }}
-                </div>
+                <!-- Avatar -->
+                <div class="h-14 w-14 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-3">
+                  <img src="@/assets/icons/icon-doctor.png" alt="Doctor Icon" class="w-full h-full object-contain">
+                </div>  
                 <div class="min-w-0 flex-1">
                   <p class="truncate text-base font-semibold text-neutral-800">
                     {{ chat.doctorName || '-' }}
@@ -175,10 +166,8 @@ const openConsultAI = () => {
             </article>
           </div>
         </section>
-
       </div>
-
-      <!-- ── Banner MedGemma ─────────────────────────────────── -->
+      <!-- Banner MedGemma -->
       <div
         v-if="showMedgemmaPromo"
         class="mt-2 rounded-2xl bg-[#1696e5] px-4 py-10 text-white sm:px-6"

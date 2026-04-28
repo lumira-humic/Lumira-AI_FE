@@ -33,12 +33,6 @@ const resolveStatusKey = (rawStatus) => {
   return STATUS_KEY_MAP[status] || "pending";
 };
 
-// ─────────────────────────────────────────────
-// Diagnosis payload normalizer
-// BE menyimpan ai_diagnosis sebagai plain string (cth: "Malignant")
-// atau JSON string (cth: '{"class":"Malignant","confidence":0.99}')
-// ─────────────────────────────────────────────
-
 const normalizeDiagnosisPayload = (rawDiagnosis) => {
   if (!rawDiagnosis) return { resultLabel: "-", confidence: 0 };
 
@@ -92,22 +86,10 @@ const formatShortDate = (rawDate) => {
 };
 
 
-// ─────────────────────────────────────────────
-// Main portal builder
-// Builds all UI data from the raw BE response of GET /patients/:id
-//
-// BE response shape (data field):
-//   id, name, email, phone, address,
-//   image (cloudinary URL),
-//   aiGradCamImage (cloudinary URL),
-//   doctorBrushImage (cloudinary URL),
-//   latestRecord { id, patient_id, original_image_path, validation_status,
-//                  ai_diagnosis, ai_confidence, ai_gradcam_path,
-//                  doctor_diagnosis, doctor_notes, doctor_brush_path,
-//                  uploaded_at, validated_at },
-//   medical_records[] — same shape as latestRecord
-// ─────────────────────────────────────────────
 
+// ─────────────────────────────────────────────
+// MAIN RAW API
+// ─────────────────────────────────────────────
 const buildPortalFromApi = (patient, profile) => {
   const rawRecords = resolveMedicalRecords(patient);
 
@@ -116,8 +98,6 @@ const buildPortalFromApi = (patient, profile) => {
       const diagnosis = normalizeDiagnosisPayload(record?.ai_diagnosis);
       const statusKey = resolveStatusKey(record?.validation_status);
 
-      // uploaded_at = waktu pasien upload gambar (createdAt surrogate)
-      // validated_at = waktu dokter review selesai
       const uploadedAt = record?.uploaded_at ?? null;
       const validatedAt = record?.validated_at ?? null;
 
@@ -130,18 +110,16 @@ const buildPortalFromApi = (patient, profile) => {
         validatedAt,
         uploadedDateLabel: formatShortDate(uploadedAt),
         verifiedDateLabel: statusKey === "done" ? formatLongDate(validatedAt) : "",
-        confidence: diagnosis.confidence,
+        confidence: Number(record?.ai_confidence ?? diagnosis.confidence ?? 0),
         aiResultLabel: diagnosis.resultLabel,
         imageUrl: record?.original_image_path || patient?.image || "",
-        doctorName: null,
+        doctorName: record?.doctor_name || record?.doctorName || "-",
       };
     })
-    // Sort by uploadedAt DESC (terbaru dulu)
     .sort((a, b) => toTimestamp(b.uploadedAt) - toTimestamp(a.uploadedAt));
 
   const latestRecord = records[0] ?? null;
 
-  // diagnosisHistory: untuk section "Riwayat Diagnosis" di History.vue
   const diagnosisHistory = records.slice(0, 6).map((record) => ({
     id: record.id,
     performedDateLabel: formatShortDate(record.uploadedAt),
@@ -154,13 +132,11 @@ const buildPortalFromApi = (patient, profile) => {
   return {
     patientProfile: {
       name: profile?.name || patient?.name || "Patient",
-      subtitle: "Breast Cancer Analytics",
       patientIdLabel: `ID: #${String(patient?.id || "UNKNOWN").slice(0, 12).toUpperCase()}`,
       scanDateLabel: latestRecord?.uploadedAt
         ? `Scan Date: ${formatShortDate(latestRecord.uploadedAt)}`
         : "Scan Date: -",
       defaultScanId: latestRecord?.id ?? null,
-      verifiedBy: null
     },
     statusRecords: records,
     activeDoctor: {
