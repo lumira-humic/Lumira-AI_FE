@@ -111,7 +111,9 @@ const isChatDoctorPage = computed(() => {
       >
         <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
           <div class="flex items-center gap-3">
-            <div class="h-14 w-14 rounded-full bg-white/90"></div>
+          <div class="h-14 w-14 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-3">
+            <img src="@/assets/icons/icon-patient.png" alt="Patient Icon" class="w-full h-full object-contain">
+          </div> 
             <div class="min-w-0">
               <p class="truncate text-base font-semibold text-neutral-700">{{ patientName }}</p>
               <p class="text-xs text-neutral-600">{{ patientId }}</p>

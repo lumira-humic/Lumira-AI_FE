@@ -1,7 +1,9 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 
 import { dataService } from "@/services/dataService";
+import { getApiErrorMessage } from "@/lib/apiResponse";
+import { useToast } from "@/composables/useToast";
 import BaseModal from "@/components/common/BaseModal.vue";
 import ModalSavedChanges from "./ModalSavedChanges.vue";
 
@@ -11,6 +13,7 @@ defineProps({
 });
 
 const emit = defineEmits(["close", "submit"]);
+const toast = useToast();
 
 const form = ref({
   name: "",
@@ -26,7 +29,44 @@ const previewUrl = ref(null);
 const isLoading = ref(false);
 const showSavedChangesModal = ref(false);
 const createdPatientData = ref(null);
+const formErrors = ref({});
 
+// ─── Validation helpers ────────────────────────────────────────────────────────
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const validateForm = () => {
+  const errors = {};
+
+  if (!form.value.name.trim()) {
+    errors.name = "Name is required.";
+  }
+
+  if (!form.value.email.trim()) {
+    errors.email = "Email is required.";
+  } else if (!EMAIL_REGEX.test(form.value.email.trim())) {
+    errors.email = "Please enter a valid email address.";
+  }
+
+  if (!form.value.password) {
+    errors.password = "Password is required.";
+  } else if (form.value.password.length < 8) {
+    errors.password = "Password must be at least 8 characters.";
+  }
+
+  formErrors.value = errors;
+  return Object.keys(errors).length === 0;
+};
+
+// ─── Phone: digits + leading + only ─────────────────────────────────────────
+const handlePhoneInput = (event) => {
+  const raw = event.target.value;
+  // Allow digits and leading + only
+  const cleaned = raw.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "");
+  form.value.phone = cleaned;
+  event.target.value = cleaned;
+};
+
+// ─── File handler ─────────────────────────────────────────────────────────────
 const handleFileChange = (event) => {
   const file = event.target.files[0];
   if (file) {
@@ -37,7 +77,14 @@ const handleFileChange = (event) => {
   }
 };
 
+// ─── Submit ───────────────────────────────────────────────────────────────────
 const handleSubmit = async () => {
+  formErrors.value = {};
+
+  if (!validateForm()) {
+    return;
+  }
+
   isLoading.value = true;
   try {
     const payload = {
@@ -49,7 +96,8 @@ const handleSubmit = async () => {
     showSavedChangesModal.value = true;
   } catch (error) {
     console.error("Failed to add patient:", error);
-    alert("Failed to add patient!");
+    const message = getApiErrorMessage(error, "Failed to add patient.");
+    toast.error(message);
   } finally {
     isLoading.value = false;
   }
@@ -61,7 +109,16 @@ const handleSavedClose = () => {
   form.value = { name: "", email: "", password: "", phone: "", gender: "Wanita", image: null, rawFile: null };
   previewUrl.value = null;
   createdPatientData.value = null;
+  formErrors.value = {};
 };
+
+// Input class helper
+const inputClass = (field) =>
+  `flex-1 px-4 py-2 bg-[#f0f0f0] rounded-full outline-none text-sm transition-colors ${
+    formErrors.value[field]
+      ? "ring-2 ring-red-400 bg-red-50"
+      : "focus:ring-2 focus:ring-[#0099ff]"
+  }`;
 </script>
 
 <template>
@@ -74,48 +131,70 @@ const handleSavedClose = () => {
     :closeOnBackdrop="false"
     maxWidth="max-w-[420px]"
   >
-    <div class="space-y-6 px-2">
+    <div class="space-y-5 px-2">
       <!-- Name -->
-      <div class="flex items-center gap-4">
-        <label class="w-24 text-[15px] font-semibold text-gray-600">Name</label>
-        <input
-          v-model="form.name"
-          type="text"
-          class="flex-1 px-4 py-2 bg-[#f0f0f0] rounded-full outline-none text-sm"
-        />
+      <div>
+        <div class="flex items-center gap-4">
+          <label class="w-24 text-[15px] font-semibold text-gray-600 shrink-0">Name</label>
+          <input
+            v-model="form.name"
+            type="text"
+            :class="inputClass('name')"
+            placeholder="Full name"
+          />
+        </div>
+        <p v-if="formErrors.name" class="mt-1 pl-28 text-xs text-red-500">{{ formErrors.name }}</p>
       </div>
+
       <!-- Email -->
-      <div class="flex items-center gap-4">
-        <label class="w-24 text-[15px] font-semibold text-gray-600">Email</label>
-        <input
-          v-model="form.email"
-          type="email"
-          class="flex-1 px-4 py-2 bg-[#f0f0f0] rounded-full outline-none text-sm"
-          autocomplete="off"
-        />
+      <div>
+        <div class="flex items-center gap-4">
+          <label class="w-24 text-[15px] font-semibold text-gray-600 shrink-0">Email</label>
+          <input
+            v-model="form.email"
+            type="email"
+            :class="inputClass('email')"
+            placeholder="example@email.com"
+            autocomplete="off"
+          />
+        </div>
+        <p v-if="formErrors.email" class="mt-1 pl-28 text-xs text-red-500">{{ formErrors.email }}</p>
       </div>
+
       <!-- Password -->
-      <div class="flex items-center gap-4">
-        <label class="w-24 text-[15px] font-semibold text-gray-600">Password</label>
-        <input
-          v-model="form.password"
-          type="password"
-          class="flex-1 px-4 py-2 bg-[#f0f0f0] rounded-full outline-none text-sm"
-          autocomplete="new-password"
-        />
+      <div>
+        <div class="flex items-center gap-4">
+          <label class="w-24 text-[15px] font-semibold text-gray-600 shrink-0">Password</label>
+          <input
+            v-model="form.password"
+            type="password"
+            :class="inputClass('password')"
+            placeholder="Min. 8 characters"
+            autocomplete="new-password"
+          />
+        </div>
+        <p v-if="formErrors.password" class="mt-1 pl-28 text-xs text-red-500">{{ formErrors.password }}</p>
       </div>
-      <!-- Phone -->
-      <div class="flex items-center gap-4">
-        <label class="w-24 text-[15px] font-semibold text-gray-600">Phone</label>
-        <input
-          v-model="form.phone"
-          type="tel"
-          class="flex-1 px-4 py-2 bg-[#f0f0f0] rounded-full outline-none text-sm"
-        />
+
+      <!-- Phone (numbers + + only) -->
+      <div>
+        <div class="flex items-center gap-4">
+          <label class="w-24 text-[15px] font-semibold text-gray-600 shrink-0">Phone</label>
+          <input
+            :value="form.phone"
+            @input="handlePhoneInput"
+            type="tel"
+            inputmode="numeric"
+            :class="inputClass('phone')"
+            placeholder="+628xxxxxxxxxx"
+          />
+        </div>
+        <p v-if="formErrors.phone" class="mt-1 pl-28 text-xs text-red-500">{{ formErrors.phone }}</p>
       </div>
+
       <!-- Gender -->
       <div class="flex items-center gap-4">
-        <label class="w-24 text-[15px] font-semibold text-gray-600">Gender</label>
+        <label class="w-24 text-[15px] font-semibold text-gray-600 shrink-0">Gender</label>
         <div class="flex bg-[#f0f0f0] rounded-full p-1 border border-transparent">
           <button
             type="button"
@@ -135,9 +214,10 @@ const handleSavedClose = () => {
           </button>
         </div>
       </div>
+
       <!-- Image / File Input -->
       <div class="flex items-center gap-4">
-        <label class="w-24 text-[15px] font-semibold text-gray-600">Image</label>
+        <label class="w-24 text-[15px] font-semibold text-gray-600 shrink-0">Image</label>
         <div class="flex-1">
           <label class="flex items-center justify-center gap-2 cursor-pointer w-full py-2 bg-[#f0f0f0] hover:bg-[#e8e8e8] rounded-full text-sm font-medium text-gray-500 transition-colors">
             <svg v-if="!form.rawFile" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-[18px] h-[18px]">
@@ -157,8 +237,9 @@ const handleSavedClose = () => {
           </label>
         </div>
       </div>
+
       <!-- Action Button -->
-      <div class="pt-6">
+      <div class="pt-4">
         <button
           @click="handleSubmit"
           :disabled="isLoading"
