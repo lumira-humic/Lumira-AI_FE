@@ -97,7 +97,6 @@ const confirmLogout = async () => {
 const isChatDoctorPage = computed(() => {
   return route.name === "patient-chat-doctor" || route.name === "patient-record-detail";
 });
-console.log("pasien id", appStore.profile)
 </script>
 
 <template>

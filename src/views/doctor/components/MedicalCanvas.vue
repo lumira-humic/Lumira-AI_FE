@@ -17,14 +17,11 @@ const width = 400;
 const height = 400;
 const stageConfig = { width, height };
 
-// REFS
 const stageRef = ref(null);
 const baseImageObj = ref(null);
 const maskImageObj = ref(null); // This displays the editable mask on the Konva stage
 const gradCamOverlayObj = ref(null); // Fallback visual layer if pixel processing fails
-const debugStatus = ref("Waiting for AI...");
 
-// NATIVE CANVAS FOR MASKING
 let maskCanvas = null;
 let maskCtx = null;
 
@@ -73,47 +70,54 @@ const loadImage = (src) => {
 
 // 2. IMPORT AI GRADCAM LOGIC
 const processGradCam = (src) => {
-  console.log("processGradCam triggered with:", src);
   if (!src) return;
-
-  // Reset state
-  gradCamOverlayObj.value = null;
-
+  // Hanya load sebagai visual overlay, tidak masuk maskCanvas
   const img = new Image();
   img.crossOrigin = "Anonymous";
-
-  img.onload = () => {
-    console.log("GradCAM Image Loaded. Copying full heatmap...");
-    try {
-      if (!maskCtx) return;
-
-      // CLEAR existing content first (optional, but good for cleanliness)
-      maskCtx.clearRect(0, 0, width, height);
-
-      // DRAW EXACT COPY (No filtering)
-      // This preserves Blue, Red, Holes, and Gradients perfectly.
-      maskCtx.drawImage(img, 0, 0, width, height);
-
-      // For editing, we might want to make the "Black" pixels transparent?
-      // Usually GradCAM has black borders. Let's do a quick pass just for pure black/white background removal if needed
-      // But user asked for "Full Blue", so we keep it as is.
-      // Transparency is handled by the v-image opacity in the template.
-
-      updateKonvaVisual();
-
-    } catch (e) {
-      console.error("Heatmap copy failed:", e);
-      fallbackLoad(src);
-    }
-  };
-
-  img.onerror = (err) => {
-    console.warn("CORS Load Failed. Switching to Fallback.", err);
-    fallbackLoad(src);
-  };
-
+  img.onload = () => { gradCamOverlayObj.value = img; };
+  img.onerror = () => { fallbackLoad(src); };
   img.src = src;
 };
+// const processGradCam = (src) => {
+//   if (!src) return;
+
+//   // Reset state
+//   gradCamOverlayObj.value = null;
+
+//   const img = new Image();
+//   img.crossOrigin = "Anonymous";
+
+//   img.onload = () => {
+//     try {
+//       if (!maskCtx) return;
+
+//       // CLEAR existing content first (optional, but good for cleanliness)
+//       maskCtx.clearRect(0, 0, width, height);
+
+//       // DRAW EXACT COPY (No filtering)
+//       // This preserves Blue, Red, Holes, and Gradients perfectly.
+//       maskCtx.drawImage(img, 0, 0, width, height);
+
+//       // For editing, we might want to make the "Black" pixels transparent?
+//       // Usually GradCAM has black borders. Let's do a quick pass just for pure black/white background removal if needed
+//       // But user asked for "Full Blue", so we keep it as is.
+//       // Transparency is handled by the v-image opacity in the template.
+
+//       updateKonvaVisual();
+
+//     } catch (e) {
+//       console.error("Heatmap copy failed:", e);
+//       fallbackLoad(src);
+//     }
+//   };
+
+//   img.onerror = (err) => {
+//     console.warn("CORS Load Failed. Switching to Fallback.", err);
+//     fallbackLoad(src);
+//   };
+
+//   img.src = src;
+// };
 
 // Fallback: Load image without CORS and display as a passive underlay
 const fallbackLoad = (src) => {
@@ -186,10 +190,27 @@ const handleMouseUp = () => {
 
 // 4. EXPORT
 const getStageDataURL = () => {
-  if (stageRef.value && stageRef.value.getStage()) {
-    return stageRef.value.getStage().toDataURL({ pixelRatio: 2 });
+  // Composite manual: tidak bergantung CORS / Konva
+  const composite = document.createElement('canvas');
+  composite.width = width;
+  composite.height = height;
+  const ctx = composite.getContext('2d');
+
+  // 1. Gambar raw image sebagai background
+  if (baseImageObj.value) {
+    try {
+      ctx.drawImage(baseImageObj.value, 0, 0, width, height);
+    } catch (e) {
+      console.warn("Gagal gambar base image:", e);
+    }
   }
-  return null;
+
+  // 2. Brush strokes di atas raw image
+  if (maskCanvas) {
+    ctx.drawImage(maskCanvas, 0, 0, width, height);
+  }
+
+  return composite.toDataURL('image/png');
 };
 
 defineExpose({ getStageDataURL, isTainted });
@@ -228,7 +249,6 @@ watch(() => props.gradCamSrc, (newVal) => {
           <v-layer>
             <!-- 1. Base Image (Patient Ultrasound) -->
             <v-image v-if="baseImageObj" :config="{ image: baseImageObj, width, height }" />
-
             <!-- 1.5 Fallback AI Overlay -->
             <v-image v-if="gradCamOverlayObj" :config="{
               image: gradCamOverlayObj,
@@ -237,14 +257,12 @@ watch(() => props.gradCamSrc, (newVal) => {
               opacity: 0.5,
               listening: false
             }" />
-
             <!-- 2. Overlay Tint for "Raw" view mode (Optional styling) -->
             <v-rect v-if="baseImageObj" :config="{
               x: 0, y: 0, width, height,
               opacity: 0.1,
               listening: false
             }" />
-
             <!-- 3. Mask Layer (The Editable Part) -->
             <!-- We set opacity to ~0.6 so the USG is visible BEHIND the full blue heatmap -->
             <v-image v-if="maskImageObj" :config="{
@@ -256,12 +274,10 @@ watch(() => props.gradCamSrc, (newVal) => {
             }" />
           </v-layer>
         </v-stage>
-
         <!-- View Mode Overlay Effect (Simulates Smooth Contour) -->
         <div v-if="viewMode === 'normalized'" class="absolute inset-0 pointer-events-none"
           style="backdrop-filter: blur(8px) contrast(1.2); mix-blend-mode: hard-light; opacity: 0.7;">
         </div>
-
       </div>
       <p class="mt-3 font-bold text-slate-600 uppercase tracking-widest text-xs">
         {{ viewMode }} VIEW

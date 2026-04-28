@@ -8,7 +8,7 @@ import { getApiErrorMessage } from '@/lib/apiResponse'
 import SearchInput from '@/components/common/SearchInput.vue'
 import Loading from '@/components/common/Loading.vue'
 import Pagination from '@/components/common/Pagination.vue'
-import DashboardIcon from '@/assets/admin/dashboard-sidebar.png'
+import DashboardIcon from '@/assets/icons/admin/icon-dashboard-sidebar.png'
 
 
 // ─── State ────────────────────────────────────────────────────────────────────

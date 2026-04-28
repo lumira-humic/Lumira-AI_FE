@@ -365,12 +365,13 @@ export const dataService = {
     };
   },
 
-  async saveDoctorReview(originalRecordId, payload) {
-    return postUnwrapped(
-      `/medical-records/${originalRecordId}/review`,
-      payload,
-    );
-  },
+async saveDoctorReview(originalRecordId, formData) {
+  return postUnwrapped(
+    `/medical-records/${originalRecordId}/review`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+},
 
   async reAnalyzePatient(patientId) {
     return postUnwrapped(`/patients/${patientId}/reanalyze`);

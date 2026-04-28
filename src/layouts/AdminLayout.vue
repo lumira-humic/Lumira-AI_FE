@@ -8,9 +8,9 @@ import { dataService } from '@/services/dataService'
 import { useAppStore } from '@/stores/appStore'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
-import DashboardIcon from '@/assets/admin/dashboard-sidebar.png'
-import DoctorIcon from '@/assets/admin/doctor.png'
-import PatientIcon from '@/assets/admin/patient.png'
+import DashboardIcon from '@/assets/icons/admin/icon-dashboard-sidebar.png'
+import DoctorIcon from '@/assets/icons/icon-doctor.png'
+import PatientIcon from '@/assets/icons/icon-patient.png'
 
 
 const route = useRoute()
@@ -138,10 +138,11 @@ onMounted(() => {
     <header class="bg-linear-to-r from-[#97D2F8] to-[#C2E8FF] rounded-b-[50px] px-3 sm:px-5 py-3 sm:py-4 shrink-0">
       <div class="grid grid-cols-3 items-center">
         <div class="flex col-span-3 lg:col-span-1 items-center gap-3 sm:gap-4">
-          <div class="h-14 w-14 rounded-full bg-white/95 shrink-0"></div>
+          <div class="h-14 w-14 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-3">
+            <img src="@/assets/icons/admin/icon-admin.png" alt="Admin Icon" class="w-full h-full object-contain">
+          </div>  
           <div>
-            <p class="text-base font-semibold text-neutral-700">{{ appStore.profile?.name || 'Admin' }}</p>
-            <p class="text-xs text-neutral-600">Breast Cancer Analytics</p>
+            <p class="text-base font-semibold text-neutral-700">{{ appStore.profile?.name || 'Administrator' }}</p>
           </div>
         </div>
         <div class="hidden lg:flex lg:col-span-1 justify-center">

@@ -8,11 +8,11 @@ import { getApiErrorMessage } from "@/lib/apiResponse";
 import ModalReviewResult from "./components/ModalReviewResult.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import Loading from "@/components/common/Loading.vue";
-import DashboardIcon from "@/assets/admin/dashboard-sidebar.png";
-import PatientIcon from "@/assets/admin/patient.png";
-import WaitingIcon from "@/assets/doctor/waiting-for-review.png";
-import DoneIcon from "@/assets/doctor/done.png";
-import AttentionIcon from "@/assets/doctor/need-attention.png";
+import DashboardIcon from '@/assets/icons/admin/icon-dashboard-sidebar.png';
+import PatientIcon from '@/assets/icons/icon-patient.png'
+import WaitingIcon from "@/assets/icons/doctor/icon-filter-waitingforreview.png";
+import DoneIcon from "@/assets/icons/doctor/icon-filter-done.png";
+import AttentionIcon from "@/assets/icons/doctor/icon-filter-needattention.png";
 
 
 const props = defineProps({

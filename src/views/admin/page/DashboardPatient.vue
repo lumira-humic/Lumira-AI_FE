@@ -14,9 +14,9 @@ import ModalAnalyzing from "../components/ModalAnalyzing.vue";
 import Pagination from "@/components/common/Pagination.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 // ICONS
-import PatientIcon from "@/assets/admin/patient.png";
-import EditIcon from "@/assets/admin/edit.png";
-import DeleteIcon from "@/assets/admin/delete.png";
+import PatientIcon from '@/assets/icons/icon-patient.png'
+import EditIcon from "@/assets/icons/admin/icon-edit.png";
+import DeleteIcon from "@/assets/icons/admin/icon-delete.png";
 
 
 const toast = useToast();

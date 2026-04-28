@@ -51,28 +51,28 @@ onMounted(async () => {
 
       if (data.latestRecord?.ai_diagnosis) {
         let parsed = data.latestRecord.ai_diagnosis;
-        if (
-          typeof parsed === "string" &&
-          (parsed.startsWith("{") || parsed.startsWith("["))
-        ) {
+        if (typeof parsed === "string" && (parsed.startsWith("{") || parsed.startsWith("["))) {
           try {
             parsed = JSON.parse(parsed);
           } catch (e) {
             console.error("JSON Parse Error", e);
           }
         }
-
-        if (typeof parsed === "object" && parsed.class) {
-          aiPrediction.value =
-            parsed.class.charAt(0).toUpperCase() + parsed.class.slice(1);
-        } else {
-          aiPrediction.value = data.latestRecord.ai_diagnosis;
-        }
+        aiPrediction.value = typeof parsed === "object" && parsed.class
+          ? parsed.class.charAt(0).toUpperCase() + parsed.class.slice(1)
+          : String(data.latestRecord.ai_diagnosis);
       }
+
       if (data.aiGradCamImage) {
         aiResultImageSrc.value = data.aiGradCamImage;
       } else {
         aiResultImageSrc.value = data.image || "";
+      }
+
+      if (isEditMode.value && data.latestRecord) {
+        const rec = data.latestRecord;
+        doctorAgreement.value = rec.agreement ?? null;
+        doctorNote.value = rec.doctor_notes ?? "";
       }
     } catch (e) {
       console.error("Error fetching patient:", e);
@@ -82,20 +82,13 @@ onMounted(async () => {
   }
 });
 
-const handleSave = async () => {
-  if (isSubmitting.value) {
-    return;
-  }
 
+const handleSave = async () => {
+  if (isSubmitting.value) return;
   if (!doctorAgreement.value) {
     toast.warning("Please select if you Agree or Disagree with the diagnosis.");
     return;
   }
-
-  const heatmapDataURL = medicalCanvasRef.value
-    ? medicalCanvasRef.value.getStageDataURL()
-    : null;
-
   if (!patientData.value?.latestRecord?.id) {
     toast.error("Medical record not found.");
     return;
@@ -104,70 +97,81 @@ const handleSave = async () => {
   isSubmitting.value = true;
 
   try {
-    await dataService.saveDoctorReview(patientData.value.latestRecord.id, {
-      agreement: doctorAgreement.value,
-      note: doctorNote.value,
-      heatmapImage: heatmapDataURL,
-    });
+    const heatmapDataURL = medicalCanvasRef.value?.getStageDataURL() ?? null;
+
+    const formData = new FormData();
+    formData.append("agreement", doctorAgreement.value);
+    formData.append("note", doctorNote.value || "");
+
+    if (heatmapDataURL) {
+      const res = await fetch(heatmapDataURL);
+      const blob = await res.blob();
+      formData.append("heatmapImage", blob, "heatmap.png");
+    }
+
+    const response = await dataService.saveDoctorReview(
+      patientData.value.latestRecord.id,
+      formData,
+    );
 
     savedDiagnosis.value = {
-      agreement: doctorAgreement.value,
-      note: doctorNote.value,
-      heatmapImage: heatmapDataURL,
+      agreement: response?.agreement ?? doctorAgreement.value,
+      note: response?.note ?? response?.doctor_notes ?? doctorNote.value ?? null,
+      heatmapImage: response?.heatmapImage ?? response?.doctor_brush_path ?? null,
+      ai_diagnosis: response?.ai_diagnosis ?? null,
     };
 
     isSaved.value = true;
     toast.success("Diagnosis submitted successfully.");
 
-    const container = document.getElementById("workspace-container");
-    if (container) {
-      setTimeout(
-        () =>
-          container.scrollTo({ top: container.scrollHeight, behavior: "smooth" }),
-        100
-      );
-    }
+    setTimeout(() => {
+      document.getElementById("workspace-container")
+        ?.scrollTo({ top: 99999, behavior: "smooth" });
+    }, 100);
+
   } catch (e) {
     isSaved.value = false;
     toast.error(getApiErrorMessage(e, "Failed to submit diagnosis."));
-    console.error("Failed to save to DB:", e);
   } finally {
     isSubmitting.value = false;
   }
 };
+
+
+const getAiDiagnosisBadgeClass = (diagnosis) => {
+  const val = String(diagnosis || "").toLowerCase();
+  if (val === "normal") return "bg-emerald-500";
+  if (val === "benign") return "bg-yellow-500";
+  if (val === "malignant") return "bg-red-500";
+  return "bg-neutral-400";
+};
+
 const handleImageUpdate = (newSrc) => {
   currentImageSrc.value = newSrc;
   doctorDrawings.value = [];
 };
+
 const setBrushType = (type) => {
   brushType.value = type;
-  if (type === 'white' || type === 'erase') {
+  if (type === "white" || type === "erase") {
     brushOpacity.value = 1.0;
   } else {
     brushOpacity.value = 0.65;
   }
 };
+
 const getBrushButtonClass = (type) => {
-  const base =
-    "px-4 py-2 rounded-lg font-bold text-sm transition-all border-2 flex items-center gap-2";
+  const base = "px-4 py-2 rounded-lg font-bold text-sm transition-all border-2 flex items-center gap-2";
   const isActive = brushType.value === type;
-  if (!isActive)
-    return base + " bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50";
+  if (!isActive) return base + " bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50";
   switch (type) {
-    case "normal":
-      return base + " bg-green-100 border-green-500 text-green-700 shadow-sm";
-    case "benign":
-      return (
-        base + " bg-yellow-100 border-yellow-500 text-yellow-700 shadow-sm"
-      );
-    case "malignant":
-      return base + " bg-red-100 border-red-500 text-red-700 shadow-sm";
-    case "nocancer":
-      return base + " bg-blue-100 border-blue-500 text-blue-700 shadow-sm";
-    case "white":
-      return base + " bg-white border-neutral-400 text-neutral-700 shadow-sm ring-1 ring-neutral-100";
-    case "erase":
-      return base + " bg-neutral-100 border-neutral-500 text-neutral-700 shadow-sm";
+    case "normal":    return base + " bg-green-100 border-green-500 text-green-700 shadow-sm";
+    case "benign":    return base + " bg-yellow-100 border-yellow-500 text-yellow-700 shadow-sm";
+    case "malignant": return base + " bg-red-100 border-red-500 text-red-700 shadow-sm";
+    case "nocancer":  return base + " bg-blue-100 border-blue-500 text-blue-700 shadow-sm";
+    case "white":     return base + " bg-white border-neutral-400 text-neutral-700 shadow-sm ring-1 ring-neutral-100";
+    case "erase":     return base + " bg-neutral-100 border-neutral-500 text-neutral-700 shadow-sm";
+    default:          return base + " bg-white border-neutral-200 text-neutral-500";
   }
 };
 </script>
@@ -200,7 +204,7 @@ const getBrushButtonClass = (type) => {
           <div class="bg-white rounded-2xl p-4 md:p-6 lg:p-8 relative">
             <!-- Main Data -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[500px] overflow-hidden">
-              <!-- AI Result & Previous Review -->
+              <!-- AI Result-->
               <div class="col-span-1 w-full h-full flex flex-col items-center min-w-0 max-h-[400px]">
                 <div
                   class="w-full h-full rounded-xl bg-white relative">
@@ -212,21 +216,6 @@ const getBrushButtonClass = (type) => {
                 <p class="mt-3 font-bold text-neutral-600 uppercase tracking-widest text-xs">
                   AI Result
                 </p>
-                <!-- Previous Review Result (Only in Edit Mode / if exists) -->
-                <div v-if="patientData.doctorBrushImage" class="mt-6 flex flex-col items-center">
-                  <div
-                    class="rounded-xl overflow-hidden border-4 border-white shadow-lg bg-black w-full max-w-50 aspect-square relative group cursor-pointer hover:scale-105 transition-transform"
-                    @click="currentImageSrc = patientData.doctorBrushImage">
-                    <img :src="patientData.doctorBrushImage" class="w-full h-full object-contain" />
-                    <div
-                      class="absolute top-2 left-2 bg-blue-600/80 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-sm shadow-sm">
-                      Previous Review
-                    </div>
-                  </div>
-                  <p class="mt-2 font-bold text-neutral-400 uppercase tracking-widest text-[10px]">
-                    Click to Load
-                  </p>
-                </div>
               </div>
               <!-- RAW data image -->
               <div class="col-span-1 w-full h-full flex flex-col items-center min-w-0">
@@ -366,39 +355,47 @@ const getBrushButtonClass = (type) => {
           >
             {{ isSubmitting ? "Submitting..." : "Submit Diagnosis" }}
           </button>
+          <!-- Panel Output saving data -->
           <div v-if="isSaved" class="bg-white rounded-2xl p-4 mt-10 animate-fade-in-up">
             <h2 class="text-2xl font-bold text-neutral-700 mb-4">
               Result By Doctor
             </h2>
             <div class="flex flex-col md:flex-row gap-8">
               <!-- Image Result -->
-              <div
-                class="w-64 h-64 bg-black rounded-xl overflow-hidden border-4 border-white shadow-sm shrink-0 relative">
-                <img :src="savedDiagnosis.heatmapImage || currentImageSrc" class="w-full h-full object-cover" />
+              <div class="w-64 h-64 bg-black rounded-xl overflow-hidden border-4 border-white shadow-sm shrink-0 relative">
+                <img
+                  v-if="savedDiagnosis.heatmapImage || currentImageSrc"
+                  :src="savedDiagnosis.heatmapImage || currentImageSrc"
+                  class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center text-neutral-500 text-xs">
+                  No image
+                </div>
               </div>
-              <!-- Addtional Info -->
+              <!-- Additional Info -->
               <div class="flex-1 space-y-4">
                 <div class="flex items-center gap-2">
                   <span class="font-bold text-neutral-800">Agree With AI?</span>
-                  <span class="font-bold" :class="savedDiagnosis.agreement === 'agree'
-                    ? 'text-green-500'
-                    : 'text-red-500'
-                    ">{{
-                      savedDiagnosis.agreement === "agree"
-                        ? "Agree"
-                        : "Disagree"
-                    }}</span>
+                  <span
+                    class="font-bold"
+                    :class="savedDiagnosis.agreement === 'agree' ? 'text-green-500' : 'text-red-500'"
+                  >
+                    {{ savedDiagnosis.agreement === 'agree' ? 'Agree' : 'Disagree' }}
+                  </span>
                 </div>
                 <div>
                   <span class="font-bold text-neutral-800">Note:</span>
                   <p class="text-neutral-500 text-sm mt-1">
-                    {{ savedDiagnosis.note || "No notes." }}
+                    {{ savedDiagnosis.note ?? '-' }}
                   </p>
                 </div>
                 <div>
                   <span class="font-bold text-neutral-800">Classification Result By AI</span>
-                  <p class="text-white text-center text-sm mt-1 py-2 px-4 rounded-xl bg-yellow-500 w-fit">
-                    {{ savedDiagnosis.ai_diagnosis || "Benign" }}
+                  <p
+                    class="text-white text-center text-sm mt-1 py-2 px-4 rounded-xl w-fit font-semibold"
+                    :class="getAiDiagnosisBadgeClass(savedDiagnosis.ai_diagnosis)"
+                  >
+                    {{ savedDiagnosis.ai_diagnosis ?? '-' }}
                   </p>
                 </div>
               </div>
@@ -408,7 +405,6 @@ const getBrushButtonClass = (type) => {
         <!-- Right Sidebar Panel -->
         <div class="sticky w-full lg:w-72 shrink-0">
           <DiagnosisPanel :patientId="patientId" :patientData="patientData" :aiPrediction="aiPrediction"
-            @update:diagnosis="(val) => console.log('Doctor selected:', val)"
             @update:agreement="(val) => (doctorAgreement = val)" />
         </div>
       </div>

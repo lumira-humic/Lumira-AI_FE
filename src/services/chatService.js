@@ -59,11 +59,11 @@ export const chatService = {
   /**
    * Get chat history for a specific room, grouped by UTC date.
    *
-   * @param {string} roomId - e.g. "CHR-123456"
+   * @param {string} roomId
    * @param {object} [options]
    * @param {number} [options.limit=20]
-   * @param {string} [options.before] - ISO timestamp for cursor pagination
-   * @param {string} [options.after] - ISO timestamp for cursor pagination
+   * @param {string} [options.before]
+   * @param {string} [options.after]
    * @returns {Promise<ChatHistoryGroup[]>}
    */
   async getChatHistory(roomId, options = {}) {
