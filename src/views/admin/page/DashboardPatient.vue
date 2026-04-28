@@ -229,13 +229,15 @@ const handleReAnalysis = async () => {
         <h1 class="text-base font-semibold text-neutral-900 sm:text-xl">Patient Management</h1>
         <span class="text-base font-semibold text-neutral-700 sm:text-xl">{{ totalItems }}</span>
       </div>
-      <div class="flex w-full sm:w-auto items-center gap-3 sm:gap-6">
-        <SearchInput
-          v-model="searchQuery"
-          :disabled="isLoading || !!errorMessage"
-          placeholder="Search by ID or Name"
-          wrapperClass="max-w-none"
-        />
+      <div class="flex flex-1 min-w-0 items-center gap-3 sm:gap-4">
+        <div class="flex-1 min-w-0">
+          <SearchInput
+            v-model="searchQuery"
+            :disabled="isLoading || !!errorMessage"
+            placeholder="Search by ID or Name"
+            wrapperClass="max-w-none"
+          />
+        </div>
         <button
           @click="openAddModal"
           class="shrink-0 cursor-pointer whitespace-nowrap rounded-xl bg-[#0D99FF] px-5 py-2.5 text-base sm:text-lg font-semibold text-white transition-colors hover:bg-[#058ee3]"
