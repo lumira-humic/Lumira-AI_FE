@@ -114,11 +114,7 @@ const withFallback = async (primaryCall, fallbackCall) => {
 export const dataService = {
   // Doctor Service
   async getDoctors() {
-    const payload = await withFallback(
-      () => getUnwrapped("/users", { params: { role: "doctor", page: 1, limit: 100 } }),
-      () => getUnwrapped("/doctors"),
-    );
-
+    const payload = await getUnwrapped("/users", { params: { role: "doctor", page: 1, limit: 100 } });
     return extractCollection(payload);
   },
 
@@ -127,26 +123,15 @@ export const dataService = {
       ...doctor,
       role: doctor?.role || "doctor",
     };
-
-    return withFallback(
-      () => postUnwrapped("/users", payload),
-      () => postUnwrapped("/doctors", doctor),
-    );
+    return postUnwrapped("/users", payload);
   },
 
   async updateDoctor(id, updates) {
-    return withFallback(
-      () => patchUnwrapped(`/users/${id}`, updates),
-      () => patchUnwrapped(`/doctors/${id}`, updates),
-    );
+    return patchUnwrapped(`/users/${id}`, updates);
   },
 
   async deleteDoctor(id) {
-    await withFallback(
-      () => httpClient.delete(`/users/${id}`),
-      () => httpClient.delete(`/doctors/${id}`),
-    );
-
+    await httpClient.delete(`/users/${id}`);
     return true;
   },
 
