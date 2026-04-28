@@ -212,22 +212,108 @@ export const dataService = {
 
 
   // Another Services
-  async getActivities() {
-    const payload = await getUnwrapped("/activities", {
-      params: { limit: 10 },
+  async getActivityLogs({ page = 1, limit = 10, search = '', date = '' } = {}) {
+    // Fetch patients with all medical records (up to 500 for log view)
+    const { data } = await httpClient.get('/patients', {
+      params: { page: 1, limit: 500 },
+    });
+    const payload = unwrapApiData(data);
+    const patients = extractCollection(payload).map(normalizePatient);
+
+    // Flatten medical records into activity log rows
+    const logs = [];
+    for (const patient of patients) {
+      const records = Array.isArray(patient.medical_records) ? patient.medical_records : [];
+      if (records.length === 0) {
+        // No records: still emit a patient log row
+        logs.push({
+          patientName: patient.name || '-',
+          role: 'Doctor',
+          time: '-',
+          message: '-',
+          date: null,
+          rawDate: null,
+        });
+      } else {
+        for (const record of records) {
+          let aiLabel = '-';
+          try {
+            const diag = record.ai_diagnosis;
+            if (diag) {
+              const parsed = typeof diag === 'string' ? JSON.parse(diag) : diag;
+              aiLabel = String(parsed?.class || diag);
+            }
+          } catch {
+            aiLabel = String(record.ai_diagnosis || '-');
+          }
+
+          const reviewStatus = record.validation_status || '-';
+          const doctorDiag = record.doctor_diagnosis || null;
+          const message = doctorDiag || aiLabel;
+
+          const uploadedAt = record.uploaded_at || record.validated_at || null;
+          const dateObj = uploadedAt ? new Date(uploadedAt) : null;
+
+          logs.push({
+            patientName: patient.name || '-',
+            role: reviewStatus === 'PENDING' || reviewStatus === '-' ? 'Doctor' : 'Doctor',
+            time: dateObj
+              ? dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })
+              : '-',
+            message,
+            date: dateObj
+              ? dateObj.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' })
+              : '-',
+            rawDate: dateObj,
+            reviewStatus,
+          });
+        }
+      }
+    }
+
+    // Sort descending by date (newest first)
+    logs.sort((a, b) => {
+      if (!a.rawDate && !b.rawDate) return 0;
+      if (!a.rawDate) return 1;
+      if (!b.rawDate) return -1;
+      return b.rawDate - a.rawDate;
     });
 
-    const items = extractCollection(payload);
+    // Filter by search (patient name or message)
+    let filtered = logs;
+    if (search) {
+      const q = search.toLowerCase();
+      filtered = filtered.filter(
+        (l) =>
+          String(l.patientName || '').toLowerCase().includes(q) ||
+          String(l.message || '').toLowerCase().includes(q) ||
+          String(l.role || '').toLowerCase().includes(q),
+      );
+    }
 
-    return items.map((log, index) => ({
-      id: log.id || index,
-      title: log.action_type || log.title || "Activity",
-      user: log.user?.name || log.user_name || log.user || "Unknown",
-      time: log.timestamp
-        ? new Date(log.timestamp).toLocaleTimeString()
-        : log.time || "-",
-      iconColor: "bg-blue-100 text-blue-600",
+    // Filter by date (YYYY-MM-DD)
+    if (date) {
+      filtered = filtered.filter((l) => {
+        if (!l.rawDate) return false;
+        const y = l.rawDate.getFullYear();
+        const m = String(l.rawDate.getMonth() + 1).padStart(2, '0');
+        const d = String(l.rawDate.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}` === date;
+      });
+    }
+
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const start = (page - 1) * limit;
+    const items = filtered.slice(start, start + limit).map((l, idx) => ({
+      ...l,
+      no: start + idx + 1,
     }));
+
+    return {
+      items,
+      meta: { page, limit, total, totalPages },
+    };
   },
 
   async getDashboardStats() {

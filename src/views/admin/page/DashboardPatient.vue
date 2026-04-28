@@ -220,20 +220,29 @@ const handleReAnalysis = async () => {
   <!-- h-full + flex-col: fill the parent RouterView container, stack vertically -->
   <section class="flex h-full min-h-0 flex-col w-full">
 
-    <!-- Header: search + add button -->
-    <div class="mb-4 flex flex-col sm:flex-row items-center justify-between lg:justify-end gap-3 sm:gap-6 shrink-0">
-      <SearchInput
-        v-model="searchQuery"
-        :disabled="isLoading || !!errorMessage"
-        placeholder="Search by ID or Name"
-        wrapperClass="max-w-none"
-      />
-      <button
-        @click="openAddModal"
-        class="w-full sm:w-fit cursor-pointer whitespace-nowrap rounded-xl bg-[#0D99FF] px-6 py-2.5 text-base sm:text-xl font-semibold text-white transition-colors hover:bg-[#058ee3]"
-      >
-        Add Patient
-      </button>
+    <!-- Section Header: icon + title + count -->
+    <div class="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center sm:gap-8 shrink-0">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <span class="h-6 w-6 sm:h-11 sm:w-11">
+          <img :src="PatientIcon" alt="Patient Management" class="h-6 w-6 object-contain sm:h-11 sm:w-11" />
+        </span>
+        <h1 class="text-base font-semibold text-neutral-900 sm:text-xl">Patient Management</h1>
+        <span class="text-base font-semibold text-neutral-700 sm:text-xl">{{ totalItems }}</span>
+      </div>
+      <div class="flex w-full sm:w-auto items-center gap-3 sm:gap-6">
+        <SearchInput
+          v-model="searchQuery"
+          :disabled="isLoading || !!errorMessage"
+          placeholder="Search by ID or Name"
+          wrapperClass="max-w-none"
+        />
+        <button
+          @click="openAddModal"
+          class="shrink-0 cursor-pointer whitespace-nowrap rounded-xl bg-[#0D99FF] px-5 py-2.5 text-base sm:text-lg font-semibold text-white transition-colors hover:bg-[#058ee3]"
+        >
+          Add Patient
+        </button>
+      </div>
     </div>
 
     <!-- Refreshing indicator -->
