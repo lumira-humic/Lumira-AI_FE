@@ -9,6 +9,7 @@ import { useAppStore } from "@/stores/appStore";
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/apiResponse";
 import { loginSchema } from "@/lib/validation/auth.validation";
 import { useToast } from "@/composables/useToast";
+import { signIntoFirebaseAfterBackendLogin } from "@/composables/useFirebaseChatSession";
 
 
 const emit = defineEmits(["close"]);
@@ -51,6 +52,13 @@ const handleLogin = handleSubmit(async (values) => {
       role,
       user,
     });
+
+    try {
+      await signIntoFirebaseAfterBackendLogin();
+    } catch (firebaseErr) {
+      // eslint-disable-next-line no-console
+      console.warn("Firebase sign-in after login failed", firebaseErr);
+    }
 
     emit("close");
 

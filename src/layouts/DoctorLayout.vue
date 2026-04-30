@@ -7,6 +7,7 @@ import { authService } from '@/services/authService'
 import { dataService } from '@/services/dataService'
 import { useAppStore } from '@/stores/appStore'
 import { useToast } from '@/composables/useToast'
+import { performFirebaseLogoutCleanup } from '@/composables/useFirebaseChatSession'
 import BaseModal from '@/components/common/BaseModal.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import DoctorChatDock from '@/components/doctor/DoctorChatDock.vue'
@@ -40,9 +41,9 @@ const paginationState = ref({
 })
 
 const menuItems = [
-  { 
-    name: 'Dashboard', 
-    path: '/doctor/dashboard', 
+  {
+    name: 'Dashboard',
+    path: '/doctor/dashboard',
     iconPath: DashboardIcon,
   },
   {
@@ -161,6 +162,8 @@ const confirmLogout = async () => {
 
   isLoggingOut.value = true
 
+  await performFirebaseLogoutCleanup()
+
   try {
     await authService.logout()
   } catch (error) {
@@ -197,7 +200,7 @@ watch(
         <div class="flex col-span-3 lg:col-span-1 items-center gap-3 sm:gap-4">
           <div class="h-14 w-14 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-3">
             <img src="@/assets/icons/icon-doctor.png" alt="Admin Icon" class="w-full h-full object-contain">
-          </div> 
+          </div>
           <div>
             <p class="text-base font-semibold text-neutral-700">{{ appStore.profile?.name || '-' }}</p>
             <p class="text-xs text-neutral-600">Breast Cancer Analytics</p>

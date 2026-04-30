@@ -7,6 +7,7 @@ import { authService } from '@/services/authService'
 import { dataService } from '@/services/dataService'
 import { useAppStore } from '@/stores/appStore'
 import { useToast } from '@/composables/useToast'
+import { performFirebaseLogoutCleanup } from '@/composables/useFirebaseChatSession'
 import BaseModal from '@/components/common/BaseModal.vue'
 import DashboardIcon from '@/assets/icons/admin/icon-dashboard-sidebar.png'
 import DoctorIcon from '@/assets/icons/icon-doctor.png'
@@ -113,6 +114,8 @@ const confirmLogout = async () => {
 
   isLoggingOut.value = true
 
+  await performFirebaseLogoutCleanup()
+
   try {
     await authService.logout()
   } catch (error) {
@@ -140,7 +143,7 @@ onMounted(() => {
         <div class="flex col-span-3 lg:col-span-1 items-center gap-3 sm:gap-4">
           <div class="h-14 w-14 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-3">
             <img src="@/assets/icons/admin/icon-admin.png" alt="Admin Icon" class="w-full h-full object-contain">
-          </div>  
+          </div>
           <div>
             <p class="text-base font-semibold text-neutral-700">{{ appStore.profile?.name || 'Administrator' }}</p>
           </div>

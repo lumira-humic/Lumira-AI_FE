@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { SendHorizontal, Loader2, RefreshCw, AlertCircle, MessageSquareOff } from "@lucide/vue";
 
 import { usePatientPortalData } from "@/composables/usePatientPortalData";
-import { useChatRooms, useChatMessages, useCreateChatRoom } from "@/composables/useChat";
+import { useChatRooms, useChatMessages, useCreateChatRoom } from "@/composables/useFirebaseChat";
 import { useAppStore } from "@/stores/appStore";
 import Loading from "@/components/common/Loading.vue";
 import LumiraLogo from "@/assets/images/lumira-logo-img.png";
@@ -44,7 +44,7 @@ const activeRoomId = ref(null);
 const isResolvingRoom = ref(false);
 const resolveError = ref("");
 
-// Room list composable — polls every 10s
+// Room list composable — Firestore listeners hydrate last-message and unread
 const {
   rooms,
   isPending: isRoomsLoading,
@@ -153,6 +153,11 @@ const initRoom = async () => {
 // Messages composable (uses activeRoomId reactively)
 // ─────────────────────────────────────────────
 
+const activeRoom = computed(
+  () => rooms.value.find((r) => r.id === activeRoomId.value) ?? null,
+);
+
+
 const {
   messages,
   draft,
@@ -160,8 +165,7 @@ const {
   isPending: isMessagesLoading,
   errorMessage: messagesError,
   sendMessage,
-  markAsRead,
-} = useChatMessages(activeRoomId, { myActorType: "patient" });
+} = useChatMessages(activeRoomId, { room: activeRoom });
 
 // ─────────────────────────────────────────────
 // Auto-scroll to bottom
@@ -272,7 +276,7 @@ const isInitializing = computed(
             <!-- Avatar -->
             <div class="h-14 w-14 rounded-full bg-neutral-200 shrink-0 flex items-center justify-center overflow-hidden p-3">
               <img src="@/assets/icons/icon-doctor.png" alt="Doctor Icon" class="w-full h-full object-contain">
-            </div>  
+            </div>
             <div>
               <p class="text-base font-semibold text-neutral-700">
                 {{ doctorInfo.name }}
