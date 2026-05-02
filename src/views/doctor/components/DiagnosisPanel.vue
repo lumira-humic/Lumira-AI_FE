@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 
 
 const props = defineProps({
@@ -12,49 +12,106 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  /**
+   * Pre-select a classification (used in edit mode to restore doctor_diagnosis).
+   * Should be Title-cased: "Normal" | "Benign" | "Malignant"
+   */
+  initialDiagnosis: {
+    type: String,
+    default: null,
+  },
+  /**
+   * When true, the classification buttons are disabled (locked).
+   * Applied when doctor has chosen "Agree" — diagnosis must follow AI prediction.
+   */
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:diagnosis", "update:agreement"]);
 
-// State
-const selectedClass = ref(props.aiPrediction); // Defaults to AI's choice
-
-// Dynamic Reference Images (SVG Data URIs)
-const referenceImages = {
-  Normal: "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2300FF00'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='white'%3ENormal Ref%3C/text%3E%3C/svg%3E",
-  Benign: "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23FFC107'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='white'%3EBenign Ref%3C/text%3E%3C/svg%3E",
-  Malignant: "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23FF0000'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='white'%3EMalignant Ref%3C/text%3E%3C/svg%3E"
+// Resolve initial selected class
+// Priority: initialDiagnosis (edit mode pre-fill) → aiPrediction (AI default)
+const resolveInitial = () => {
+  if (props.initialDiagnosis) {
+    const v = String(props.initialDiagnosis).trim();
+    // Normalize to Title-case to match button values
+    return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
+  }
+  return props.aiPrediction ?? "Malignant";
 };
 
-const currentRefImage = computed(() => referenceImages[selectedClass.value]);
+const selectedClass = ref(resolveInitial());
 
-// Handle Click on Traffic Light
+// Re-sync when edit-mode data arrives asynchronously
+watch(
+  () => props.initialDiagnosis,
+  (next) => {
+    if (next) {
+      const v = String(next).trim();
+      selectedClass.value = v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
+    }
+  },
+);
+
+// Also sync when aiPrediction changes (e.g. data loaded after mount)
+watch(
+  () => props.aiPrediction,
+  (next) => {
+    if (!props.initialDiagnosis && next) {
+      selectedClass.value = next;
+    }
+  },
+);
+
+// Classification selection
+/**
+ * Handle click on a classification button.
+ * When disabled (agreement === 'agree'), buttons are inert.
+ *
+ * The logic:
+ *   - If doctor picks what AI picked → agreement = "agree"
+ *   - Otherwise → agreement = "disagree"
+ */
 const setClass = (newClass) => {
+  if (props.disabled) return;
   selectedClass.value = newClass;
   emit("update:diagnosis", newClass);
 
-  // Smart Logic: If doctor picks what AI picked -> Agree. Else -> Disagree.
   const agreement = newClass === props.aiPrediction ? "agree" : "disagree";
   emit("update:agreement", agreement);
 };
 
-// Styling Helper
 const getStatusClass = (status) => {
   const isActive = selectedClass.value === status;
 
+  if (props.disabled) {
+    if (isActive) {
+      switch (status) {
+        case "Normal":    return "bg-green-200 text-green-600 ring-2 ring-green-200 cursor-not-allowed";
+        case "Benign":    return "bg-yellow-200 text-yellow-600 ring-2 ring-yellow-200 cursor-not-allowed";
+        case "Malignant": return "bg-red-200 text-red-600 ring-2 ring-red-200 cursor-not-allowed";
+      }
+    }
+    return "bg-neutral-100 text-neutral-300 border border-neutral-200 cursor-not-allowed";
+  }
+
   if (isActive) {
     switch (status) {
-      case "Normal":
-        return "bg-green-500 text-white shadow-lg scale-105 ring-2 ring-green-200";
-      case "Benign":
-        return "bg-yellow-400 text-white shadow-lg scale-105 ring-2 ring-yellow-200";
-      case "Malignant":
-        return "bg-red-600 text-white shadow-lg scale-105 ring-2 ring-red-200";
+      case "Normal":    return "bg-green-500 text-white shadow-lg scale-105 ring-2 ring-green-200";
+      case "Benign":    return "bg-yellow-400 text-white shadow-lg scale-105 ring-2 ring-yellow-200";
+      case "Malignant": return "bg-red-600 text-white shadow-lg scale-105 ring-2 ring-red-200";
     }
   }
-  // Inactive State (Dimmed)
+  // Inactive
   return "bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-300 hover:scale-105";
 };
+
+const lockBadgeText = computed(() =>
+  props.disabled ? "Locked (Agreed with AI)" : null,
+);
 </script>
 
 <template>
@@ -84,49 +141,54 @@ const getStatusClass = (status) => {
         </p>
       </div>
     </div>
+
     <!-- Classification -->
     <div class="bg-white p-5 rounded-xl">
-      <div class="mb-4">
+      <div class="mb-4 flex items-center justify-between gap-2">
         <h3 class="text-center font-bold text-neutral-800">Classification Result</h3>
-        <!-- <span class="text-xs font-bold px-2 py-1 rounded bg-neutral-200 text-neutral-500">
-          AI: {{ aiPrediction }}
-        </span> -->
+        <!-- Lock badge shown when disabled (doctor agreed with AI) -->
+        <span
+          v-if="lockBadgeText"
+          class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-400 border border-neutral-200"
+        >
+          {{ lockBadgeText }}
+        </span>
       </div>
+
       <!-- Classification Options -->
       <div class="flex flex-col gap-3 relative">
-        <button @click="setClass('Normal')"
-          class="cursor-pointer p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
-          :class="getStatusClass('Normal')">
+        <button
+          @click="setClass('Normal')"
+          :disabled="disabled"
+          class="p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
+          :class="[getStatusClass('Normal'), disabled ? 'cursor-not-allowed' : 'cursor-pointer']"
+        >
           Normal
         </button>
 
-        <button @click="setClass('Benign')"
-          class="cursor-pointer p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
-          :class="getStatusClass('Benign')">
+        <button
+          @click="setClass('Benign')"
+          :disabled="disabled"
+          class="p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
+          :class="[getStatusClass('Benign'), disabled ? 'cursor-not-allowed' : 'cursor-pointer']"
+        >
           Benign
         </button>
 
-        <button @click="setClass('Malignant')"
-          class="cursor-pointer p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
-          :class="getStatusClass('Malignant')">
+        <button
+          @click="setClass('Malignant')"
+          :disabled="disabled"
+          class="p-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ease-in-out"
+          :class="[getStatusClass('Malignant'), disabled ? 'cursor-not-allowed' : 'cursor-pointer']"
+        >
           Malignant
         </button>
       </div>
-      <!-- Example Reference Image -->
-      <!-- <div class="mt-6 pt-4 border-t border-neutral-200 animate-fade-in">
-        <p class="text-xs font-bold text-neutral-400 uppercase mb-2">
-          Reference: {{ selectedClass }} Example
-        </p>
-        <div class="w-full h-32 bg-white rounded-lg overflow-hidden border border-neutral-200 relative group">
-          <img :src="currentRefImage"
-            class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span class="bg-black/50 text-white text-xs px-2 py-1 rounded">
-              Standard {{ selectedClass }}
-            </span>
-          </div>
-        </div>
-      </div> -->
+
+      <!-- Helper text -->
+      <p v-if="disabled" class="mt-3 text-[11px] text-neutral-400 text-center">
+        Pilih <strong>Disagree</strong> untuk mengubah diagnosis
+      </p>
     </div>
   </div>
 </template>

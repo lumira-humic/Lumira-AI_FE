@@ -1,29 +1,20 @@
-import { computed } from "vue";
 import { useQuery } from "@tanstack/vue-query";
+import { computed } from "vue";
 
-import { dataService } from "@/services/dataService";
-import { chatService } from "@/services/chatService";
 import { getApiErrorMessage } from "@/lib/apiResponse";
+import { dataService } from "@/services/dataService";
 
-
-// ─────────────────────────────────────────────
-// ValidationStatus enum dari BE:
-//   PENDING   → belum diproses
-//   REVIEWED  → dokter sedang review
-//   APPROVED  → selesai / disetujui
-//   REJECTED  → selesai / ditolak
-// ─────────────────────────────────────────────
 
 const STATUS_KEY_MAP = {
   PENDING: "pending",
-  REVIEWED: "in_review",
+  REVIEWED: "done",
   APPROVED: "done",
   REJECTED: "done",
 };
 
 const statusLabelByKey = {
   pending: "Pending",
-  in_review: "In Review",
+  in_review: "Done",
   done: "Done",
 };
 
@@ -113,7 +104,9 @@ const buildPortalFromApi = (patient, profile) => {
         confidence: Number(record?.ai_confidence ?? diagnosis.confidence ?? 0),
         aiResultLabel: diagnosis.resultLabel,
         imageUrl: record?.original_image_path || patient?.image || "",
-        doctorName: record?.doctor_name || record?.doctorName || "-",
+        doctorName: record?.doctor?.name || "-",
+        doctorId: record?.doctor?.id || "-",
+        isDoctorActive: record?.doctor?.status || "-"
       };
     })
     .sort((a, b) => toTimestamp(b.uploadedAt) - toTimestamp(a.uploadedAt));
@@ -124,7 +117,7 @@ const buildPortalFromApi = (patient, profile) => {
     id: record.id,
     performedDateLabel: formatShortDate(record.uploadedAt),
     validatedDateLabel: record.statusKey === "done" ? formatShortDate(record.validatedAt) : "-",
-    resultLabel: record.aiResultLabel.toUpperCase() || "PENDING",
+    resultLabel: record.aiResultLabel.toUpperCase(),
     resultTone: record.statusKey === "done" ? "green" : "sky",
     recordId: record.id,
   }));
@@ -140,9 +133,9 @@ const buildPortalFromApi = (patient, profile) => {
     },
     statusRecords: records,
     activeDoctor: {
-      name: null,
+      name: latestRecord?.doctorName,
       subtitle: "Breast Cancer Analytics",
-      activeLabel: null,
+      activeLabel: latestRecord?.isDoctorActive,
     },
     aiAssistant: {
       name: "MedGemma Assistant",
@@ -199,39 +192,20 @@ export const usePatientPortalData = () => {
     retry: 1,
   });
 
-  // Step 4: GET /chat/rooms — room list untuk "Riwayat Chat Dokter"
-  const chatRoomsQuery = useQuery({
-    queryKey: ["patient-chat-rooms"],
-    queryFn: () => chatService.listRooms(),
-    enabled: computed(() => Boolean(patientId.value)),
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 5,
-    retry: 1,
-  });
-
-  // Portal data dibangun dari patient detail
-  const portalData = computed(() => {
-    const base = buildPortalFromApi(
+  // Portal data dibangun dari patient detail.
+  //
+  // NOTE: "Riwayat Chat Dokter" (doctorChatHistory) is no longer hydrated
+  // here. It now lives in History.vue
+  // via useChatRooms() so the previews and presence stream live from
+  // Firestore + RTDB instead of being polled through REST. This composable
+  // continues to expose `doctorChatHistory: []` from buildPortalFromApi for
+  // backward compatibility with any consumer that still reads it.
+  const portalData = computed(() =>
+    buildPortalFromApi(
       patientDetailQuery.data.value ?? null,
       currentUserQuery.data.value ?? null,
-    );
-
-    // Inject doctorChatHistory dari chat rooms
-    const rawRooms = Array.isArray(chatRoomsQuery.data.value)
-      ? chatRoomsQuery.data.value
-      : [];
-
-    const doctorChatHistory = rawRooms.map((room) => ({
-      id: room.id,
-      doctorName: room.counterpartName ?? "-",
-      lastMessagePreview: room.lastMessagePreview ?? null,
-      activityText: room.counterpartActivityText ?? "",
-      relatedRecordId: room.medicalRecordId ?? null,
-      dateLabel: room.lastMessageAt ? formatShortDate(room.lastMessageAt) : "-",
-    }));
-
-    return { ...base, doctorChatHistory };
-  });
+    ),
+  );
 
   const isLoading = computed(() => {
     if (currentUserQuery.isPending.value) return true;
@@ -243,8 +217,7 @@ export const usePatientPortalData = () => {
 
   const isRefreshing = computed(() =>
     currentUserQuery.isFetching.value ||
-    patientDetailQuery.isFetching.value ||
-    chatRoomsQuery.isFetching.value,
+    patientDetailQuery.isFetching.value,
   );
 
   const errorMessage = computed(() => {
@@ -260,7 +233,7 @@ export const usePatientPortalData = () => {
   const refetchAll = async () => {
     await currentUserQuery.refetch();
     if (patientId.value) {
-      await Promise.all([patientDetailQuery.refetch(), chatRoomsQuery.refetch()]);
+      await patientDetailQuery.refetch();
     }
   };
 

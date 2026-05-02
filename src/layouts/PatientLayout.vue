@@ -6,6 +6,7 @@ import { BarChart3, History, LogOut, Menu, MessageSquareText, Sparkles, X } from
 import { authService } from "@/services/authService";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/composables/useToast";
+import { performFirebaseLogoutCleanup } from "@/composables/useFirebaseChatSession";
 import BaseModal from "@/components/common/BaseModal.vue";
 
 
@@ -80,6 +81,8 @@ const confirmLogout = async () => {
 
   isLoggingOut.value = true;
 
+  await performFirebaseLogoutCleanup();
+
   try {
     await authService.logout();
   } catch (error) {
@@ -113,15 +116,15 @@ const isChatDoctorPage = computed(() => {
           <div class="flex items-center gap-3">
           <div class="h-14 w-14 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-3">
             <img src="@/assets/icons/icon-patient.png" alt="Patient Icon" class="w-full h-full object-contain">
-          </div> 
+          </div>
             <div class="min-w-0">
               <p class="truncate text-base font-semibold text-neutral-700">{{ patientName }}</p>
               <p class="text-xs text-neutral-600">{{ patientId }}</p>
             </div>
           </div>
-  
+
           <p class="text-center text-xl font-semibold text-neutral-700">Welcome {{ patientName }}</p>
-  
+
           <div class="flex justify-end lg:hidden">
             <button
               type="button"

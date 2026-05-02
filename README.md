@@ -10,7 +10,7 @@ Frontend base workspace for LUMIRA AI
 - Axios + Interceptor
 - TanStack Vue Query
 - VeeValidate + Zod
-- Socket.IO Client
+- Firebase Web SDK (Auth + Firestore + Realtime Database) for chat
 - Tailwind CSS v4
 
 ## How to run
@@ -30,6 +30,13 @@ VITE_WS_BASE_URL=http://localhost:3000
 VITE_FILE_BASE_URL=http://localhost:3000/files
 VITE_AI_API_URL=http://localhost:8000
 VITE_APP_ENV=development
+
+# Firebase Web SDK (Firebase Console → Project Settings → Web app)
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_DATABASE_URL=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_APP_ID=
 ```
 
 
