@@ -118,9 +118,10 @@ const initRoom = async () => {
   // Case 3: Rooms loaded but no matching room → need to create one.
   // Must have doctorId. Try to get it from any existing room as fallback,
   // since we don't have it from medical_records directly.
-  const existingRoom = rooms.value[0] ?? null;
-  const doctorId = existingRoom?.doctorId ?? null;
+  // const existingRoom = rooms.value[0] ?? null;
 
+  // IT SHOULD BE CONFIRM/DISCUSS
+  const doctorId = portalData?.value.statusRecords[0]?.doctorId ?? null;
   if (!doctorId) {
     // No rooms exist at all and no doctorId available.
     // This means: no doctor has been assigned to any record yet.

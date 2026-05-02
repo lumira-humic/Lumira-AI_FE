@@ -27,10 +27,17 @@ const brushOpacity = ref(0.65);
 const doctorDrawings = ref([]);
 const doctorNote = ref("");
 const doctorAgreement = ref(null);
+// doctorDiagnosis: tracks selection from DiagnosisPanel
+// Default = AI prediction; updated via @update:diagnosis
+const doctorDiagnosis = ref("");
 const isSaved = ref(false);
 const isSubmitting = ref(false);
 
-const savedDiagnosis = ref({ agreement: null, note: null, heatmapImage: null });
+// diagnosisPanelDisabled: lock DiagnosisPanel when doctor agrees with AI
+// If agreed → doctor's diagnosis must equal AI prediction (no change allowed)
+const diagnosisPanelDisabled = computed(() => doctorAgreement.value === "agree");
+
+const savedDiagnosis = ref({ agreement: null, note: null, doctorBrushPath: null, ai_diagnosis: null, doctorDiagnosis: null });
 const showImageModal = ref(false);
 const medicalCanvasRef = ref(null);
 
@@ -72,7 +79,13 @@ onMounted(async () => {
       if (isEditMode.value && data.latestRecord) {
         const rec = data.latestRecord;
         doctorAgreement.value = rec.agreement ?? null;
-        doctorNote.value = rec.doctor_notes ?? "";
+        doctorNote.value = rec.note ?? rec.doctor_notes ?? "";
+        if (rec.doctor_diagnosis) {
+          const d = String(rec.doctor_diagnosis).trim();
+          doctorDiagnosis.value = d.charAt(0).toUpperCase() + d.slice(1).toLowerCase();
+        }
+      } else if (data.latestRecord?.ai_diagnosis) {
+        doctorDiagnosis.value = aiPrediction.value;
       }
     } catch (e) {
       console.error("Error fetching patient:", e);
@@ -86,11 +99,11 @@ onMounted(async () => {
 const handleSave = async () => {
   if (isSubmitting.value) return;
   if (!doctorAgreement.value) {
-    toast.warning("Please select if you Agree or Disagree with the diagnosis.");
+    toast.warning("Please select if you Agree or Disagree with the diagnosis");
     return;
   }
   if (!patientData.value?.latestRecord?.id) {
-    toast.error("Medical record not found.");
+    toast.error("Medical record not found");
     return;
   }
 
@@ -102,23 +115,26 @@ const handleSave = async () => {
     const formData = new FormData();
     formData.append("agreement", doctorAgreement.value);
     formData.append("note", doctorNote.value || "");
+    formData.append("doctorDiagnosis", String(doctorDiagnosis.value || aiPrediction.value).toLowerCase());
 
     if (heatmapDataURL) {
       const res = await fetch(heatmapDataURL);
       const blob = await res.blob();
-      formData.append("heatmapImage", blob, "heatmap.png");
+      formData.append("doctorBrushPath", blob, "heatmap.png");
     }
 
-    const response = await dataService.saveDoctorReview(
-      patientData.value.latestRecord.id,
-      formData,
-    );
+    const recordId = patientData.value.latestRecord.id;
+
+    const response = isEditMode.value
+      ? await dataService.editDoctorReview(recordId, formData)
+      : await dataService.saveDoctorReview(recordId, formData);
 
     savedDiagnosis.value = {
-      agreement: response?.agreement ?? doctorAgreement.value,
-      note: response?.note ?? response?.doctor_notes ?? doctorNote.value ?? null,
-      heatmapImage: response?.heatmapImage ?? response?.doctor_brush_path ?? null,
+      agreement: response?.agreement ?? null,
+      note: response?.note ?? response?.doctor_notes ?? null,
+      doctorBrushPath: response?.doctorBrushPath ?? response?.doctor_brush_path ?? null,
       ai_diagnosis: response?.ai_diagnosis ?? null,
+      doctorDiagnosis: response?.doctor_diagnosis ?? doctorDiagnosis.value ?? null,
     };
 
     isSaved.value = true;
@@ -364,8 +380,8 @@ const getBrushButtonClass = (type) => {
               <!-- Image Result -->
               <div class="w-64 h-64 bg-black rounded-xl overflow-hidden border-4 border-white shadow-sm shrink-0 relative">
                 <img
-                  v-if="savedDiagnosis.heatmapImage || currentImageSrc"
-                  :src="savedDiagnosis.heatmapImage || currentImageSrc"
+                  v-if="savedDiagnosis.doctorBrushPath || currentImageSrc"
+                  :src="savedDiagnosis.doctorBrushPath || currentImageSrc"
                   class="w-full h-full object-cover"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center text-neutral-500 text-xs">
@@ -382,6 +398,15 @@ const getBrushButtonClass = (type) => {
                   >
                     {{ savedDiagnosis.agreement === 'agree' ? 'Agree' : 'Disagree' }}
                   </span>
+                </div>
+                <div v-if="savedDiagnosis.doctorDiagnosis">
+                  <span class="font-bold text-neutral-800">Doctor's Diagnosis:</span>
+                  <p
+                    class="text-white text-center text-sm mt-1 py-2 px-4 rounded-xl w-fit font-semibold"
+                    :class="getAiDiagnosisBadgeClass(savedDiagnosis.doctorDiagnosis)"
+                  >
+                    {{ savedDiagnosis.doctorDiagnosis }}
+                  </p>
                 </div>
                 <div>
                   <span class="font-bold text-neutral-800">Note:</span>
@@ -404,8 +429,19 @@ const getBrushButtonClass = (type) => {
         </div>
         <!-- Right Sidebar Panel -->
         <div class="sticky w-full lg:w-72 shrink-0">
-          <DiagnosisPanel :patientId="patientId" :patientData="patientData" :aiPrediction="aiPrediction"
-            @update:agreement="(val) => (doctorAgreement = val)" />
+          <DiagnosisPanel
+            :patientId="patientId"
+            :patientData="patientData"
+            :aiPrediction="aiPrediction"
+            :initialDiagnosis="doctorDiagnosis || aiPrediction"
+            :disabled="diagnosisPanelDisabled"
+            @update:diagnosis="(val) => (doctorDiagnosis = val)"
+            @update:agreement="(val) => {
+              doctorAgreement = val;
+              // When doctor switches to 'agree', reset doctorDiagnosis to AI prediction
+              if (val === 'agree') doctorDiagnosis = aiPrediction;
+            }"
+          />
         </div>
       </div>
       <ImageInputModal :isOpen="showImageModal" @close="showImageModal = false" @confirm="handleImageUpdate" />

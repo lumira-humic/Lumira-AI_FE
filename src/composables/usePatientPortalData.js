@@ -5,24 +5,16 @@ import { getApiErrorMessage } from "@/lib/apiResponse";
 import { dataService } from "@/services/dataService";
 
 
-// ─────────────────────────────────────────────
-// ValidationStatus enum dari BE:
-//   PENDING   → belum diproses
-//   REVIEWED  → dokter sedang review
-//   APPROVED  → selesai / disetujui
-//   REJECTED  → selesai / ditolak
-// ─────────────────────────────────────────────
-
 const STATUS_KEY_MAP = {
   PENDING: "pending",
-  REVIEWED: "in_review",
+  REVIEWED: "done",
   APPROVED: "done",
   REJECTED: "done",
 };
 
 const statusLabelByKey = {
   pending: "Pending",
-  in_review: "In Review",
+  in_review: "Done",
   done: "Done",
 };
 
@@ -112,7 +104,9 @@ const buildPortalFromApi = (patient, profile) => {
         confidence: Number(record?.ai_confidence ?? diagnosis.confidence ?? 0),
         aiResultLabel: diagnosis.resultLabel,
         imageUrl: record?.original_image_path || patient?.image || "",
-        doctorName: record?.doctor_name || record?.doctorName || "-",
+        doctorName: record?.doctor?.name || "-",
+        doctorId: record?.doctor?.id || "-",
+        isDoctorActive: record?.doctor?.status || "-"
       };
     })
     .sort((a, b) => toTimestamp(b.uploadedAt) - toTimestamp(a.uploadedAt));
@@ -123,7 +117,7 @@ const buildPortalFromApi = (patient, profile) => {
     id: record.id,
     performedDateLabel: formatShortDate(record.uploadedAt),
     validatedDateLabel: record.statusKey === "done" ? formatShortDate(record.validatedAt) : "-",
-    resultLabel: record.aiResultLabel.toUpperCase() || "PENDING",
+    resultLabel: record.aiResultLabel.toUpperCase(),
     resultTone: record.statusKey === "done" ? "green" : "sky",
     recordId: record.id,
   }));
@@ -139,9 +133,9 @@ const buildPortalFromApi = (patient, profile) => {
     },
     statusRecords: records,
     activeDoctor: {
-      name: null,
+      name: latestRecord?.doctorName,
       subtitle: "Breast Cancer Analytics",
-      activeLabel: null,
+      activeLabel: latestRecord?.isDoctorActive,
     },
     aiAssistant: {
       name: "MedGemma Assistant",

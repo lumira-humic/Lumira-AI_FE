@@ -68,14 +68,13 @@ const doctorNote = computed(() => {
           <ArrowLeft class="h-4 w-4" />
           Back
         </button>
-
-        <button
+        <!-- <button
           type="button"
           @click="refetchAll"
           class="cursor-pointer rounded-lg border border-sky-300 bg-white px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-50"
         >
           Refresh
-        </button>
+        </button> -->
       </div>
       <div v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
         {{ errorMessage }}
