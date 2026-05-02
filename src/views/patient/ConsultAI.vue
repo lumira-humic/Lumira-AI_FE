@@ -111,6 +111,43 @@ const handleSessionClick = (sessionId) => {
 };
 
 const isSessionActive = (sessionId) => activeSessionId.value === sessionId;
+
+const parseMarkdown = (text) => {
+  if (!text) return "";
+
+  // 1. Escape HTML biar aman
+  let html = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  // 2. Bold: **teks** → <strong>teks</strong>
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  // 3. Bullet list: baris yang diawali "* " atau "*   "
+  const lines = html.split("\n");
+  const rendered = [];
+  let inList = false;
+
+  for (const line of lines) {
+    const bullet = line.match(/^\*\s+(.*)/);
+    if (bullet) {
+      if (!inList) {
+        rendered.push('<ul class="my-1 list-disc space-y-0.5 pl-4">');
+        inList = true;
+      }
+      rendered.push(`<li>${bullet[1]}</li>`);
+    } else {
+      if (inList) {
+        rendered.push("</ul>");
+        inList = false;
+      }
+      rendered.push(line);
+    }
+  }
+  if (inList) rendered.push("</ul>");
+
+  // 4. Newline jadi <br> (kecuali di dalam tag HTML)
+  return rendered.join("\n").replace(/\n(?!<\/?(ul|li))/g, "<br>");
+};
 </script>
 
 <template>
@@ -274,7 +311,10 @@ const isSessionActive = (sessionId) => activeSessionId.value === sessionId;
                   <Bot class="h-4 w-4 text-sky-600" />
                 </div>
                 <div class="rounded-2xl rounded-tl-sm bg-[#C2E8FF] px-4 py-2.5 text-sm text-neutral-800 shadow-sm">
-                  <p class="whitespace-pre-wrap leading-relaxed">{{ message.text }}</p>
+                  <div
+                    class="prose-sm leading-relaxed"
+                    v-html="parseMarkdown(message.text)"
+                  />
                   <p class="mt-1 text-[10px] text-neutral-500">{{ message.time }}</p>
                 </div>
               </div>
