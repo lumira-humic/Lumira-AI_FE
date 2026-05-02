@@ -11,4 +11,7 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  optimizeDeps: {
+    include: ['tslib', 'firebase/app', 'firebase/auth', 'firebase/firestore']
+  }
 })

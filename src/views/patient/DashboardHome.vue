@@ -1,26 +1,24 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { Ellipsis, Eye, MessageSquareText, Sparkles, CircleCheck  } from "@lucide/vue";
+import { Ellipsis, MessageSquareText, Sparkles, CircleCheck  } from "@lucide/vue";
 
 import { usePatientPortalData } from "@/composables/usePatientPortalData";
 import { useAppStore } from "@/stores/appStore";
 import Loading from "@/components/common/Loading.vue";
-import SearchInput from "@/components/common/SearchInput.vue";
 import LumiraLogo from "@/assets/images/lumira-logo-img.png";
 
 
 const router = useRouter();
 const appStore = useAppStore();
 
-const { portalData, isLoading, errorMessage, isRefreshing, refetchAll } = usePatientPortalData();
+const { portalData, isLoading, errorMessage, refetchAll } = usePatientPortalData();
 
 const statusFilter = ref("pending");
 const searchKeyword = ref("");
 
 const statusTabs = [
   { key: "pending", label: "Pending", icon: Ellipsis  },
-  { key: "in_review", label: "In Review", icon: Eye },
   { key: "done", label: "Done", icon: CircleCheck },
 ];
 
@@ -116,13 +114,10 @@ const formatDateTime = (validatedAt) => {
     <div v-if="isLoading" class="flex min-h-0 flex-1 items-center justify-center">
       <Loading text="Loading patient dashboard..." />
     </div>
-    <!-- Main Data -->
-    <div v-else class="relative z-10 flex justify-between min-h-0 flex-1 flex-col overflow-y-auto pr-1">
-      <!-- Delete this, if API data form BE's ready -->
-      <div v-if="isRefreshing" class="flex flex-col gap-2">
-        <p class="text-xs text-neutral-500">Refreshing patient timeline...</p>
-      </div>
-      <div class="flex flex-col gap-4 overflow-y-auto">
+    <!-- Main Content -->
+    <div v-else class="relative z-10 flex justify-between min-h-0 flex-1 flex-col overflow-y-auto">
+      <!-- Main Data -->
+      <div class="flex flex-col gap-8 overflow-y-auto">
         <!-- If Error -->
         <div v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
           <p>{{ errorMessage }}</p>
@@ -135,7 +130,7 @@ const formatDateTime = (validatedAt) => {
           </button>
         </div>
         <!-- Profile & Search -->
-        <div class="grid gap-3 xl:grid-cols-[280px_1fr] xl:items-center">
+        <!-- <div class="grid gap-3 xl:grid-cols-[280px_1fr] xl:items-center">
           <div class="rounded-2xl bg-[#C2E8FF] px-3 py-2">
             <div class="flex items-center gap-3">
             <div class="h-14 w-14 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-3">
@@ -152,9 +147,9 @@ const formatDateTime = (validatedAt) => {
             wrapperClass="max-w-full"
             customMainClass="py-2 bg-neutral-100! border border-neutral-300!"
           />
-        </div>
+        </div> -->
         <!-- Status filter -->
-        <div class="grid grid-cols-3 gap-2 mt-4">
+        <div class="grid grid-cols-2 gap-2 mt-4">
           <button
             v-for="tab in statusTabs"
             :key="tab.key"
@@ -167,7 +162,7 @@ const formatDateTime = (validatedAt) => {
           </button>
         </div>
         <!-- Main Data -->
-        <div class="h-75 flex flex-col justify-between rounded-2xl border border-neutral-300 bg-white/70 p-4 sm:p-6 max-h-75 overflow-y-auto">
+        <div class="h-79 flex flex-col justify-between rounded-2xl border border-neutral-300 bg-white/70 p-4 sm:p-6 max-h-79 overflow-y-hidden">
           <template v-if="activeRecord">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -193,33 +188,9 @@ const formatDateTime = (validatedAt) => {
                 </div>
                 <!-- Information -->
                 <div>
-                  <p class="text-xl font-semibold text-neutral-800">{{ activeRecord.note }}</p>
-                  <p class="text-2xl font-semibold text-neutral-900">{{ activeRecord.title }}</p>
+                  <p class="text-xl font-semibold text-neutral-800">Mohon tunggu, data anda sedang di proses oleh kami</p>
+                  <p class="text-xl font-semibold text-neutral-800">Please wait, we are processing your data</p>
                 </div>
-              </div>
-            </template>
-            <template v-else-if="activeRecord.statusKey === 'in_review'">
-              <div class="space-y-4 py-2">
-                <div class="mx-auto flex max-w-xl items-center gap-4 rounded-2xl border border-neutral-200 bg-white p-4 shadow">
-                  <div class="flex h-20 w-20 items-center justify-center rounded-xl bg-neutral-200 text-neutral-600">
-                    <Eye class="h-10 w-10" />
-                  </div>
-                  <div>
-                    <p class="text-sm text-neutral-500">Assigned Doctor</p>
-                    <p class="text-4xl font-semibold text-neutral-700">{{ activeRecord.doctorName }}</p>
-                  </div>
-                </div>
-  
-                <button
-                  type="button"
-                  @click="openDoctorChat"
-                  class="cursor-pointer w-full rounded-lg border border-sky-300 bg-white px-4 py-3 text-xl font-semibold text-[#118EE4] transition hover:bg-sky-50"
-                >
-                  <span class="inline-flex items-center gap-2">
-                    <MessageSquareText class="h-5 w-5" />
-                    Chat with Doctor
-                  </span>
-                </button>
               </div>
             </template>
             <template v-else>
@@ -239,7 +210,7 @@ const formatDateTime = (validatedAt) => {
                   </div>
                 </div>
                 <!-- Action Buttons -->
-                <div class="grid gap-10 sm:grid-cols-2">
+                <div class="grid gap-10 sm:grid-cols-2 mt-8">
                   <button
                     type="button"
                     @click="openRecordDetail"
@@ -261,8 +232,8 @@ const formatDateTime = (validatedAt) => {
               </div>
             </template>
           </template>
-          <div v-else class="flex items-center justify-center rounded-xl bg-neutral-100 h-full text-center text-neutral-500">
-            No data found for this status.
+          <div v-else class="text-sm sm:text-base flex items-center justify-center rounded-xl bg-neutral-100 h-full text-center text-neutral-600">
+            No data found for this status. You can check the others status
           </div>
         </div>
       </div>

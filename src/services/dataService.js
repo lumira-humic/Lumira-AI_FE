@@ -146,7 +146,7 @@ export const dataService = {
       withMeta = false,
     } = options;
 
-    const { data } = await httpClient.get("/patients", {
+    const { data: rawResponse } = await httpClient.get("/patients", {
       params: {
         page,
         limit,
@@ -154,23 +154,25 @@ export const dataService = {
       },
     });
 
-    const payload = unwrapApiData(data);
+    const payload = unwrapApiData(rawResponse);
     const patients = extractCollection(payload).map(normalizePatient);
 
     if (!withMeta) {
       return patients;
     }
 
-    const metaLimit = Number(data?.meta?.limit || limit || 10);
-    const metaTotal = Number(data?.meta?.total || patients.length || 0);
+    const serverMeta = rawResponse?.meta ?? {};
+    const metaPage  = Number(serverMeta.page  ?? page);
+    const metaLimit = Number(serverMeta.limit  ?? limit);
+    const metaTotal = Number(serverMeta.total ?? patients.length);
     const metaTotalPages = Number(
-      data?.meta?.totalPages || Math.max(1, Math.ceil(metaTotal / Math.max(1, metaLimit))),
+      serverMeta.totalPages ?? Math.max(1, Math.ceil(metaTotal / Math.max(1, metaLimit))),
     );
 
     return {
       items: patients,
       meta: {
-        page: Number(data?.meta?.page || page || 1),
+        page: metaPage,
         limit: metaLimit,
         total: metaTotal,
         totalPages: metaTotalPages,
@@ -304,7 +306,6 @@ export const dataService = {
   async getDashboardStats() {
     const payload = await withFallback(
       () => getUnwrapped("/stats/dashboard"),
-      // () => getUnwrapped("/dashboard/stats"),
     );
 
     return normalizeStats(payload);
@@ -350,13 +351,21 @@ export const dataService = {
     };
   },
 
-async saveDoctorReview(originalRecordId, formData) {
-  return postUnwrapped(
-    `/medical-records/${originalRecordId}/review`,
-    formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } }
-  );
-},
+  async saveDoctorReview(recordId, formData) {
+    return postUnwrapped(
+      `/medical-records/${recordId}/review`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+  },
+
+  async editDoctorReview(recordId, formData) {
+    const { data } = await httpClient.patch(
+      `/medical-records/${recordId}/review`,
+      formData,
+    );
+    return unwrapApiData(data);
+  },
 
   async reAnalyzePatient(patientId) {
     return postUnwrapped(`/patients/${patientId}/reanalyze`);
