@@ -5,6 +5,7 @@ import { ChevronRight, Sparkles, MessagesSquare } from "@lucide/vue";
 
 import { useAppStore } from "@/stores/appStore";
 import { usePatientPortalData } from "@/composables/usePatientPortalData";
+import { useChatRooms } from "@/composables/useFirebaseChat";
 import Loading from "@/components/common/Loading.vue";
 import LumiraLogo from "@/assets/images/lumira-logo-img.png";
 
@@ -12,9 +13,28 @@ import LumiraLogo from "@/assets/images/lumira-logo-img.png";
 const router = useRouter();
 const appStore = useAppStore();
 const { portalData, isLoading } = usePatientPortalData();
+const { rooms: chatRooms } = useChatRooms();
 
 const diagnosisRecords = computed(() => portalData.value.diagnosisHistory ?? []);
-const doctorChats = computed(() => portalData.value.doctorChatHistory ?? []);
+
+const formatShortDate = (rawDate) => {
+  if (!rawDate) return "-";
+  const d = new Date(rawDate);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+};
+
+const doctorChats = computed(() =>
+  chatRooms.value.map((room) => ({
+    id: room.id,
+    doctorName: room.counterpartName ?? "-",
+    lastMessagePreview: room.lastMessagePreview ?? null,
+    activityText: room.counterpartActivityText ?? "",
+    relatedRecordId: room.medicalRecordId ?? null,
+    dateLabel: formatShortDate(room.lastMessageAt ?? room.updatedAt ?? room.createdAt),
+  })),
+);
+
 const showMedgemmaPromo = computed(() => appStore.featureToggles.medgemmaEnabled);
 
 const toneClass = (tone) => {
@@ -130,7 +150,7 @@ const openConsultAI = () => {
                 <!-- Avatar -->
                 <div class="h-14 w-14 rounded-full bg-white/95 shrink-0 flex items-center justify-center overflow-hidden p-3">
                   <img src="@/assets/icons/icon-doctor.png" alt="Doctor Icon" class="w-full h-full object-contain">
-                </div>  
+                </div>
                 <div class="min-w-0 flex-1">
                   <p class="truncate text-base font-semibold text-neutral-800">
                     {{ chat.doctorName || '-' }}

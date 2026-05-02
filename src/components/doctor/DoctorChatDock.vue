@@ -11,7 +11,7 @@ import {
   X,
 } from "@lucide/vue";
 
-import { useChatRooms, useChatMessages } from "@/composables/useChat";
+import { useChatRooms, useChatMessages } from "@/composables/useFirebaseChat";
 import Loading from "@/components/common/Loading.vue";
 
 
@@ -56,8 +56,7 @@ const {
   isPending: isMessagesLoading,
   errorMessage: messagesError,
   sendMessage,
-  markAsRead,
-} = useChatMessages(activeRoomId, { myActorType: "doctor" });
+} = useChatMessages(activeRoomId, { room: activeRoom });
 
 // ─────────────────────────────────────────────
 // Auto-scroll to bottom when messages arrive
@@ -87,7 +86,6 @@ const closePanel = () => {
 
 const selectRoom = async (roomId) => {
   activeRoomId.value = roomId;
-  await markAsRead();
   scrollToBottom();
 };
 

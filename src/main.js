@@ -1,14 +1,15 @@
-import './style.css'
-import { createApp } from 'vue'
 import { VueQueryPlugin } from '@tanstack/vue-query'
+import { createApp } from 'vue'
 import VueKonva from 'vue-konva'
+import './style.css'
 
 import App from './App.vue'
-import router from './router'
+import { signIntoFirebaseAfterBackendLogin } from './composables/useFirebaseChatSession'
 import { pinia } from './lib/pinia'
 import { queryClient } from './lib/queryClient'
-import { useAppStore } from './stores/appStore'
+import router from './router'
 import { authService } from './services/authService'
+import { useAppStore } from './stores/appStore'
 
 
 const app = createApp(App)
@@ -27,6 +28,13 @@ if (appStore.isAuthenticated && !appStore.currentRole) {
 	} catch (error) {
 		appStore.clearSession()
 	}
+}
+
+if (appStore.isAuthenticated) {
+	signIntoFirebaseAfterBackendLogin().catch((err) => {
+		// eslint-disable-next-line no-console
+		console.warn('Firebase sign-in on app boot failed', err)
+	})
 }
 
 window.addEventListener('auth:unauthorized', () => {
