@@ -30,6 +30,7 @@ const doctorChats = computed(() =>
     doctorName: room.counterpartName ?? "-",
     lastMessagePreview: room.lastMessagePreview ?? null,
     activityText: room.counterpartActivityText ?? "",
+    isOnline: Boolean(room.counterpartIsOnline),
     relatedRecordId: room.medicalRecordId ?? null,
     dateLabel: formatShortDate(room.lastMessageAt ?? room.updatedAt ?? room.createdAt),
   })),
@@ -163,11 +164,10 @@ const openConsultAI = () => {
                     {{ chat.lastMessagePreview }}
                   </p>
                   <!-- Activity text (presence) -->
-                  <p
-                    v-else-if="chat.activityText"
-                    class="truncate text-xs text-neutral-400 mt-0.5"
-                  >
-                    {{ chat.activityText }}
+                  <p v-else-if="chat.activityText" class="truncate text-xs mt-0.5">
+                    <span :class="chat.isOnline ? 'text-blue-500' : 'text-neutral-400'">
+                      {{ chat.activityText }}
+                    </span>
                   </p>
                 </div>
                   <ChevronRight class="h-4 w-4 text-neutral-400" />

@@ -145,7 +145,6 @@ const handleDeleteDoctor = async () => {
 <template>
   <!-- h-full + flex-col: fill the parent RouterView container, stack vertically -->
   <section class="flex h-full min-h-0 flex-col w-full">
-
     <!-- Section Header: icon + title + count -->
     <div class="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center sm:gap-8 shrink-0">
       <div class="flex items-center gap-2 sm:gap-3">
@@ -172,10 +171,6 @@ const handleDeleteDoctor = async () => {
         </button>
       </div>
     </div>
-
-    <!-- Refreshing indicator -->
-    <p v-if="isRefreshing" class="mb-2 text-xs text-neutral-400 shrink-0">Refreshing…</p>
-
     <!-- Table Header -->
     <div class="grid grid-cols-6 pl-3 pr-8 py-2 text-base sm:text-lg xl:text-xl font-semibold text-neutral-900 shrink-0">
       <div class="col-span-1"></div>
@@ -185,7 +180,6 @@ const handleDeleteDoctor = async () => {
       <div class="col-span-1">{{ heads[3] }}</div>
       <div class="col-span-1 text-center">{{ heads[4] }}</div>
     </div>
-
     <!-- Table Body: flex-1 makes it fill remaining height, overflow-y-auto adds scrollbar -->
     <div class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-2">
       <!-- Loading -->

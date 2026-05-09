@@ -2,6 +2,8 @@
 import { computed, nextTick, ref, watch } from "vue";
 import {
   ChevronUp,
+  Check,
+  CheckCheck,
   Loader2,
   MailOpen,
   MessageSquareMore,
@@ -13,12 +15,14 @@ import {
 
 import { useChatRooms, useChatMessages } from "@/composables/useFirebaseChat";
 import Loading from "@/components/common/Loading.vue";
+import DoctorChatRecordModal from "@/components/doctor/DoctorChatRecordModal.vue";
 
 
 const isOpen = ref(false);
 const searchQuery = ref("");
 const activeRoomId = ref(null);
 const chatThreadRef = ref(null);
+const isRecordModalOpen = ref(false);
 
 // ─────────────────────────────────────────────
 // Room list
@@ -44,6 +48,9 @@ const filteredRooms = computed(() => {
 const activeRoom = computed(() =>
   rooms.value.find((r) => r.id === activeRoomId.value) ?? null,
 );
+
+const activePatientId = computed(() => activeRoom.value?.patientId || "");
+const activeRecordId = computed(() => activeRoom.value?.medicalRecordId || "");
 
 // ─────────────────────────────────────────────
 // Messages in active room
@@ -82,6 +89,7 @@ const openPanel = () => {
 const closePanel = () => {
   isOpen.value = false;
   activeRoomId.value = null;
+  isRecordModalOpen.value = false;
 };
 
 const selectRoom = async (roomId) => {
@@ -98,6 +106,29 @@ const handleKeyEnter = async (e) => {
   if (e.shiftKey) return; // allow shift+enter for newlines if wanted
   await handleSend();
 };
+
+const openRecordModal = () => {
+  if (!activeRoom.value) return;
+  isRecordModalOpen.value = true;
+};
+
+const isOutgoingMessage = (message) => message?.senderType === "doctor";
+
+const resolveReceiptStatus = (message) => {
+  if (!isOutgoingMessage(message)) return "";
+  if (message.isRead) return "read";
+  if (activeRoom.value?.counterpartIsOnline) return "delivered";
+  return "sent";
+};
+
+const resolveReceiptClass = (status) =>
+  status === "read" ? "text-blue-500" : "text-neutral-400";
+
+watch(activeRoomId, (nextRoomId) => {
+  if (!nextRoomId) {
+    isRecordModalOpen.value = false;
+  }
+});
 </script>
 
 <template>
@@ -126,7 +157,6 @@ const handleKeyEnter = async (e) => {
       class="fixed bottom-2 right-2 z-50 h-[68vh] w-[calc(100vw-1rem)] overflow-hidden rounded-2xl bg-[#D9D9D9] shadow-xl sm:absolute sm:bottom-0 sm:right-0 sm:h-130 sm:w-[min(800px,calc(100vw-1rem))]"
     >
       <div class="h-full md:grid md:grid-cols-[280px_1fr]">
-
         <!-- Left: Room List -->
         <aside
           class="h-full min-h-0 flex-col md:flex"
@@ -162,17 +192,27 @@ const handleKeyEnter = async (e) => {
                 </button>
               </div>
             </div>
-
             <!-- Search -->
-            <div class="flex items-center rounded-full bg-white px-3 py-1.5 gap-2">
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="Cari nama pasien"
-                class="w-full bg-transparent text-xs outline-none"
-                aria-label="Cari pasien"
-              />
-              <Search class="h-4 w-4 text-neutral-500 shrink-0" />
+            <div class="flex items-center gap-2">
+              <div class="flex flex-1 items-center rounded-full bg-white px-3 py-1.5 gap-2">
+                <input
+                  v-model="searchQuery"
+                  type="text"
+                  placeholder="Cari nama pasien"
+                  class="w-full bg-transparent text-xs outline-none"
+                  aria-label="Cari pasien"
+                />
+                <Search class="h-4 w-4 text-neutral-500 shrink-0" />
+              </div>
+              <button
+                v-if="activeRoom"
+                type="button"
+                @click="openRecordModal"
+                class="cursor-pointer rounded-full bg-sky-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-600"
+                aria-label="Lihat detail record"
+              >
+                View
+              </button>
             </div>
           </div>
           <!-- List -->
@@ -219,7 +259,7 @@ const handleKeyEnter = async (e) => {
                     </p>
                     <p
                       v-if="room.lastMessagePreview"
-                      class="text-xs text-neutral-500 truncate max-w-[140px]"
+                      class="text-xs text-neutral-500 truncate max-w-35"
                     >
                       {{ room.lastMessagePreview }}
                     </p>
@@ -237,8 +277,10 @@ const handleKeyEnter = async (e) => {
                 </div>
               </div>
               <!-- Presence -->
-              <p class="mt-1 text-xs text-neutral-400 pl-11">
-                {{ room.counterpartActivityText }}
+              <p class="mt-1 text-xs pl-11">
+                <span :class="room.counterpartIsOnline ? 'text-green-600' : 'text-neutral-400'">
+                  {{ room.counterpartActivityText }}
+                </span>
               </p>
             </button>
           </div>
@@ -273,7 +315,9 @@ const handleKeyEnter = async (e) => {
                 <h4 class="text-base sm:text-lg xl:text-xl font-semibold text-black">
                   {{ activeRoom.counterpartName }}
                 </h4>
-                <p class="text-xs text-neutral-600">{{ activeRoom.counterpartActivityText }}</p>
+                <p :class="activeRoom.counterpartIsOnline ? 'text-blue-500' : 'text-neutral-600'" class="text-xs">
+                  {{ activeRoom.counterpartActivityText }}
+                </p>
               </div>
               <button
                 type="button"
@@ -324,7 +368,20 @@ const handleKeyEnter = async (e) => {
                       "
                     >
                       <p class="whitespace-pre-wrap wrap-break-word">{{ item.text }}</p>
-                      <p class="mt-1 text-right text-[10px] opacity-60">{{ item.time }}</p>
+                      <div class="mt-1 flex items-center justify-end gap-1 text-[10px]">
+                        <span class="text-neutral-500">{{ item.time }}</span>
+                        <template v-if="resolveReceiptStatus(item)">
+                          <Check
+                            v-if="resolveReceiptStatus(item) === 'sent'"
+                            class="h-3 w-3 text-neutral-400"
+                          />
+                          <CheckCheck
+                            v-else
+                            class="h-3 w-3"
+                            :class="resolveReceiptClass(resolveReceiptStatus(item))"
+                          />
+                        </template>
+                      </div>
                     </div>
                   </div>
                 </template>
@@ -371,6 +428,13 @@ const handleKeyEnter = async (e) => {
       </div>
     </div>
   </div>
+
+  <DoctorChatRecordModal
+    :isOpen="isRecordModalOpen"
+    :patientId="activePatientId"
+    :recordId="activeRecordId"
+    @close="isRecordModalOpen = false"
+  />
 </template>
 
 <style scoped>

@@ -143,6 +143,7 @@ export const dataService = {
       page = 1,
       limit = 10,
       search = "",
+      status = "",
       withMeta = false,
     } = options;
 
@@ -151,6 +152,7 @@ export const dataService = {
         page,
         limit,
         ...(search ? { search } : {}),
+        ...(status ? { status } : {}),
       },
     });
 
@@ -200,12 +202,27 @@ export const dataService = {
 
   // Another Services
   async getActivityLogs({ page = 1, limit = 10, search = '', date = '' } = {}) {
-    // Fetch patients with all medical records (up to 500 for log view)
-    const { data } = await httpClient.get('/patients', {
-      params: { page: 1, limit: 500 },
-    });
-    const payload = unwrapApiData(data);
-    const patients = extractCollection(payload).map(normalizePatient);
+    const safeLimit = Math.max(1, Number(limit || 10));
+    const patients = [];
+    let currentPage = 1;
+    let totalPages = 1;
+
+    // Pull all patient pages so the log view can be derived client-side.
+    while (currentPage <= totalPages) {
+      const { data } = await httpClient.get('/patients', {
+        params: { page: currentPage, limit: safeLimit },
+      });
+      const payload = unwrapApiData(data);
+      const pagePatients = extractCollection(payload).map(normalizePatient);
+      patients.push(...pagePatients);
+
+      const serverMeta = data?.meta ?? {};
+      const metaTotal = Number(serverMeta.total ?? patients.length);
+      totalPages = Number(
+        serverMeta.totalPages ?? Math.max(1, Math.ceil(metaTotal / safeLimit)),
+      );
+      currentPage += 1;
+    }
 
     // Flatten medical records into activity log rows
     const logs = [];
@@ -290,16 +307,16 @@ export const dataService = {
     }
 
     const total = filtered.length;
-    const totalPages = Math.max(1, Math.ceil(total / limit));
-    const start = (page - 1) * limit;
-    const items = filtered.slice(start, start + limit).map((l, idx) => ({
+    const computedTotalPages = Math.max(1, Math.ceil(total / safeLimit));
+    const start = (page - 1) * safeLimit;
+    const items = filtered.slice(start, start + safeLimit).map((l, idx) => ({
       ...l,
       no: start + idx + 1,
     }));
 
     return {
       items,
-      meta: { page, limit, total, totalPages },
+      meta: { page, limit: safeLimit, total, totalPages: computedTotalPages },
     };
   },
 
