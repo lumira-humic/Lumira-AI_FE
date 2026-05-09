@@ -181,6 +181,7 @@ export const useChatRooms = () => {
       timeLabel: "",
       unreadCount: 0,
       counterpartActivityText: "Offline",
+      counterpartIsOnline: false,
       _presence: { isOnline: false, lastChanged: null },
     });
     cards.set(room.id, card);
@@ -247,7 +248,9 @@ export const useChatRooms = () => {
       const data = snap.val();
       const lastChanged =
         typeof data?.last_changed === "number" ? new Date(data.last_changed) : null;
-      card._presence = { isOnline: data?.state === "online", lastChanged };
+      const isOnline = data?.state === "online";
+      card._presence = { isOnline, lastChanged };
+      card.counterpartIsOnline = isOnline;
       card.counterpartActivityText = formatPresenceLabel(card._presence);
       rebuildRooms();
     });

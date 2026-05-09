@@ -1,6 +1,14 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { SendHorizontal, Loader2, RefreshCw, AlertCircle, MessageSquareOff } from "@lucide/vue";
+import {
+  Check,
+  CheckCheck,
+  SendHorizontal,
+  Loader2,
+  RefreshCw,
+  AlertCircle,
+  MessageSquareOff,
+} from "@lucide/vue";
 
 import { usePatientPortalData } from "@/composables/usePatientPortalData";
 import { useChatRooms, useChatMessages, useCreateChatRoom } from "@/composables/useFirebaseChat";
@@ -85,12 +93,14 @@ const doctorInfo = computed(() => {
     return {
       name: matchingRoom.value.counterpartName,
       activityText: matchingRoom.value.counterpartActivityText,
+      isOnline: Boolean(matchingRoom.value.counterpartIsOnline),
     };
   }
 
   return {
     name: portalData.value?.activeDoctor?.name ?? "Assigned Doctor",
     activityText: portalData.value?.activeDoctor?.activeLabel ?? "",
+    isOnline: false,
   };
 });
 
@@ -230,6 +240,18 @@ const handleRetry = async () => {
   await initRoom();
 };
 
+const isOutgoingMessage = (message) => message?.senderType === "patient";
+
+const resolveReceiptStatus = (message) => {
+  if (!isOutgoingMessage(message)) return "";
+  if (message.isRead) return "read";
+  if (activeRoom.value?.counterpartIsOnline) return "delivered";
+  return "sent";
+};
+
+const resolveReceiptClass = (status) =>
+  status === "read" ? "text-blue-500" : "text-neutral-400";
+
 // Combined loading: waiting for portal OR rooms OR room resolution
 const isInitializing = computed(
   () => isPortalLoading.value || isRoomsLoading.value || isResolvingRoom.value || isCreating.value,
@@ -282,7 +304,7 @@ const isInitializing = computed(
               <p class="text-base font-semibold text-neutral-700">
                 {{ doctorInfo.name }}
               </p>
-              <p class="text-xs text-neutral-500">
+              <p :class="doctorInfo.isOnline ? 'text-green-600' : 'text-neutral-500'" class="font-semibold text-xs">
                 {{ doctorInfo.activityText }}
               </p>
             </div>
@@ -360,9 +382,20 @@ const isInitializing = computed(
                 "
               >
                 <p class="whitespace-pre-wrap">{{ item.text }}</p>
-                <p class="mt-1 text-right text-xs font-semibold opacity-60">
-                  {{ item.time }}
-                </p>
+                <div class="mt-1 flex items-center justify-end gap-1 text-xs">
+                  <span class="text-neutral-500">{{ item.time }}</span>
+                  <template v-if="resolveReceiptStatus(item)">
+                    <Check
+                      v-if="resolveReceiptStatus(item) === 'sent'"
+                      class="h-3.5 w-3.5 text-neutral-400"
+                    />
+                    <CheckCheck
+                      v-else
+                      class="h-3.5 w-3.5"
+                      :class="resolveReceiptClass(resolveReceiptStatus(item))"
+                    />
+                  </template>
+                </div>
               </div>
             </div>
           </template>
