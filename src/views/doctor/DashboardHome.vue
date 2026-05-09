@@ -97,44 +97,29 @@ const resolveAiLabel = (patient) => {
 // REVIEWED  → dokter sudah review (in review / submitted)
 // APPROVED  → disetujui / done
 // REJECTED  → ditolak / done (tapi ditolak)
-const isPendingStatus = (review) => {
-  const status = normalizeReviewStatus(review);
-  return status === "PENDING" || status === "" || status === "-";
-};
-
 const isDoneStatus = (review) => {
   const status = normalizeReviewStatus(review);
   return status === "APPROVED" || status === "REJECTED" || status === "REVIEWED";
 };
 
-const isAttentionCase = (patient) => {
-  if (!isPendingStatus(patient.review)) {
-    return false;
+const statusFilter = computed(() => {
+  if (currentFilter.value === "Not Yet") {
+    return "waitingForReview";
   }
 
-  const aiLabel = resolveAiLabel(patient).toLowerCase();
-  return !patient.image || aiLabel.includes("malignant") || aiLabel === "-";
-};
-
-const hasStatusFilter = computed(() => {
-  return currentFilter.value === "Not Yet" || currentFilter.value === "Done" || currentFilter.value === "Attention";
-});
-
-const requestPage = computed(() => {
-  if (hasStatusFilter.value) {
-    return 1;
+  if (currentFilter.value === "Done") {
+    return "completed";
   }
 
-  return Math.max(1, Number(props.page || 1));
-});
-
-const requestLimit = computed(() => {
-  if (hasStatusFilter.value) {
-    return 100;
+  if (currentFilter.value === "Attention") {
+    return "needAttention";
   }
 
-  return Math.max(1, Number(props.limit || 10));
+  return "";
 });
+
+const requestPage = computed(() => Math.max(1, Number(props.page || 1)));
+const requestLimit = computed(() => Math.max(1, Number(props.limit || 10)));
 
 const patientsQuery = useQuery({
   queryKey: computed(() => [
@@ -142,6 +127,7 @@ const patientsQuery = useQuery({
     requestPage.value,
     requestLimit.value,
     debouncedSearch.value,
+    statusFilter.value,
   ]),
   queryFn: () => {
     return dataService.getPatients({
@@ -149,6 +135,7 @@ const patientsQuery = useQuery({
       page: requestPage.value,
       limit: requestLimit.value,
       search: debouncedSearch.value,
+      status: statusFilter.value,
     });
   },
   placeholderData: (previousData) => previousData,
@@ -171,47 +158,11 @@ const serverMeta = computed(() => {
     totalPages: Number(patientsQuery.data.value?.meta?.totalPages || 1),
   };
 });
+const filteredPatients = computed(() => serverItems.value);
 
-const searchedPatients = computed(() => serverItems.value);
-
-const filteredPatients = computed(() => {
-  if (currentFilter.value === "Not Yet") {
-    return searchedPatients.value.filter((patient) => isPendingStatus(patient.review));
-  }
-
-  if (currentFilter.value === "Done") {
-    return searchedPatients.value.filter((patient) => isDoneStatus(patient.review));
-  }
-
-  if (currentFilter.value === "Attention") {
-    return searchedPatients.value.filter((patient) => isAttentionCase(patient));
-  }
-
-  return searchedPatients.value;
-});
-
-// Server handles pagination for "All" view.
-// For filter views (Not Yet / Done / Attention), we fetch all and filter locally
-// because BE doesn't expose status filter on GET /patients.
-const useLocalPagination = computed(() => hasStatusFilter.value);
-
-
-const totalItems = computed(() => {
-  if (useLocalPagination.value) {
-    return filteredPatients.value.length;
-  }
-
-  return Number(serverMeta.value.total || filteredPatients.value.length);
-});
-
-const summaryCounts = computed(() => {
-  return {
-    all: Number(serverMeta.value.total || serverItems.value.length),
-    waiting: serverItems.value.filter((p) => isPendingStatus(p.review)).length,
-    done: serverItems.value.filter((p) => isDoneStatus(p.review)).length,
-    attention: serverItems.value.filter((p) => isAttentionCase(p)).length,
-  };
-});
+const totalItems = computed(() =>
+  Number(serverMeta.value.total || filteredPatients.value.length),
+);
 
 
 const sectionConfig = computed(() => {
@@ -219,7 +170,7 @@ const sectionConfig = computed(() => {
     return {
       title: "Waiting For Review",
       icon: WaitingIcon,
-      count: summaryCounts.value.waiting,
+      count: totalItems.value,
     };
   }
 
@@ -227,7 +178,7 @@ const sectionConfig = computed(() => {
     return {
       title: "Completed",
       icon: DoneIcon,
-      count: summaryCounts.value.done,
+      count: totalItems.value,
     };
   }
 
@@ -235,20 +186,23 @@ const sectionConfig = computed(() => {
     return {
       title: "Need Attention",
       icon: AttentionIcon,
-      count: summaryCounts.value.attention,
+      count: totalItems.value,
     };
   }
 
   return {
     title: "Dashboard",
     icon: DashboardIcon,
-    count: summaryCounts.value.all,
+    count: totalItems.value,
   };
 });
 
 const totalPages = computed(() => {
-  const safeLimit = Math.max(1, Number(props.limit || 1));
-  return Math.max(1, Math.ceil(totalItems.value / safeLimit));
+  const safeLimit = Math.max(1, Number(requestLimit.value || 1));
+  return Math.max(
+    1,
+    Number(serverMeta.value.totalPages || Math.ceil(totalItems.value / safeLimit)),
+  );
 });
 
 const currentPage = computed(() => {
@@ -265,18 +219,11 @@ const currentPage = computed(() => {
 });
 
 const paginatedPatients = computed(() => {
-  if (!useLocalPagination.value) {
-    return filteredPatients.value;
-  }
-
-  const safeLimit = Math.max(1, Number(props.limit || 1));
-  const start = (currentPage.value - 1) * safeLimit;
-  const end = start + safeLimit;
-  return filteredPatients.value.slice(start, end);
+  return filteredPatients.value;
 });
 
 const paginationMeta = computed(() => {
-  const safeLimit = Math.max(1, Number(props.limit || 1));
+  const safeLimit = Math.max(1, Number(requestLimit.value || 1));
   const from = totalItems.value === 0 ? 0 : (currentPage.value - 1) * safeLimit + 1;
   const to = totalItems.value === 0 ? 0 : Math.min(currentPage.value * safeLimit, totalItems.value);
 

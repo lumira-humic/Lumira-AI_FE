@@ -7,7 +7,7 @@ import { unwrapApiData } from "@/lib/apiResponse";
 
 const httpClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
-    timeout: 120000,
+    timeout: 900000,
 });
 
 const refreshClient = axios.create({
