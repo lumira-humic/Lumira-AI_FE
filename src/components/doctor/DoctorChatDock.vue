@@ -315,7 +315,7 @@ watch(activeRoomId, (nextRoomId) => {
                 <h4 class="text-base sm:text-lg xl:text-xl font-semibold text-black">
                   {{ activeRoom.counterpartName }}
                 </h4>
-                <p :class="activeRoom.counterpartIsOnline ? 'text-blue-500' : 'text-neutral-600'" class="text-xs">
+                <p :class="activeRoom.counterpartIsOnline ? 'text-green-600' : 'text-neutral-600'" class="text-xs">
                   {{ activeRoom.counterpartActivityText }}
                 </p>
               </div>

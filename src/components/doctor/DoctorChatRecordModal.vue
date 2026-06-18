@@ -160,7 +160,7 @@ const errorMessage = computed(() =>
 </script>
 
 <template>
-    <BaseModal :isOpen="isOpen" title="Patient Record" maxWidth="max-w-5xl" centerTitle @close="$emit('close')" :closeOnBackdrop="false">
+    <BaseModal :isOpen="isOpen" title="Patient Record" maxWidth="max-w-5xl" centerTitle @close="$emit('close')" :closeOnBackdrop="true">
         <div class="max-h-[75vh] overflow-y-auto pr-1">
             <div v-if="isLoading" class="py-8">
                 <Loading text="Loading record..." />
@@ -211,7 +211,7 @@ const errorMessage = computed(() =>
                         </div>
                     </div>
                     <div class="space-y-4">
-                        <div class="rounded-2xl border border-sky-500 bg-white p-4">
+                        <div class="rounded-2xl border border-neutral-300 bg-white p-4">
                             <div class="mb-3 flex items-start justify-between gap-3">
                                 <div
                                     class="inline-flex items-center gap-2 rounded-md bg-sky-100 px-2 py-1 text-sky-600">
@@ -234,7 +234,7 @@ const errorMessage = computed(() =>
                                 {{ aiResultLabel }}
                             </p>
                         </div>
-                        <div class="rounded-2xl border border-sky-500 bg-white p-4">
+                        <div class="rounded-2xl border border-neutral-300 bg-white p-4">
                             <div class="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-neutral-700">
                                 <FileText class="h-4 w-4" />
                                 Doctor's Note
