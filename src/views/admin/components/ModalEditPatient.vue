@@ -5,6 +5,10 @@ import { ref, watch } from "vue";
 import BaseModal from "@/components/common/BaseModal.vue";
 import ModalChangePassword from "./ModalChangePassword.vue";
 import ModalSavedChanges from "./ModalSavedChanges.vue";
+import { useToast } from "@/composables/useToast";
+import { getApiErrorMessage } from "@/lib/apiResponse";
+
+const toast = useToast();
 
 
 const props = defineProps({
@@ -21,6 +25,7 @@ const form = ref({
   name: "",
   email: "",
   password: "",
+  currentPassword: "",
   phone: "",
   gender: "Wanita",
   image: null,
@@ -36,6 +41,7 @@ const updatedPatientData = ref(null);
 const handleChangePasswordSubmit = (data) => {
   showChangePasswordModal.value = false;
   form.value.password = data.newPassword;
+  form.value.currentPassword = data.currentPassword;
 };
 
 watch(
@@ -46,6 +52,7 @@ watch(
         name: newVal.name || "",
         email: newVal.email || "",
         password: "",
+        currentPassword: "",
         phone: newVal.phone || "",
         gender: newVal.gender || "Wanita",
         image: newVal.image,
@@ -108,13 +115,17 @@ const handleSubmit = async () => {
     if (form.value.password) {
       payload.password = form.value.password;
     }
+    if (form.value.currentPassword) {
+      payload.currentPassword = form.value.currentPassword;
+    }
     await dataService.updatePatient(props.patient.id, payload);
     
     updatedPatientData.value = { ...payload, rawFile: rawFile.value };
     showSavedChangesModal.value = true;
   } catch (error) {
     console.error("Failed to update patient:", error);
-    alert("Failed to update patient!");
+    const msg = getApiErrorMessage(error, "Failed to update patient!");
+    toast.error(msg);
   } finally {
     isLoading.value = false;
   }
