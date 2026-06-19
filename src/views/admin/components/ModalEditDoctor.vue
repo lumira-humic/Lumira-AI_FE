@@ -6,6 +6,10 @@ import { dataService } from "@/services/dataService";
 import BaseModal from "@/components/common/BaseModal.vue";
 import ModalChangePassword from "./ModalChangePassword.vue";
 import ModalSavedChanges from "./ModalSavedChanges.vue";
+import { useToast } from "@/composables/useToast";
+import { getApiErrorMessage } from "@/lib/apiResponse";
+
+const toast = useToast();
 
 
 const props = defineProps({
@@ -22,6 +26,7 @@ const form = ref({
   name: "",
   email: "",
   password: "",
+  currentPassword: "",
   status: "Active",
 });
 
@@ -38,6 +43,7 @@ watch(
         name: newVal.name || newVal.username || "",
         email: newVal.email || "",
         password: "", // Reset password field
+        currentPassword: "",
         status: newVal.status || "Active",
       };
       formErrors.value = {};
@@ -79,16 +85,24 @@ const handleSubmit = async () => {
   }
   isLoading.value = true;
   try {
-    await dataService.updateDoctor(props.doctor.id, {
+    const payload = {
       name: form.value.name,
       email: form.value.email,
       status: form.value.status,
-      password: form.value.password || undefined, // hanya jika diubah
-    });
+    };
+    if (form.value.password) {
+      payload.password = form.value.password;
+    }
+    if (form.value.currentPassword) {
+      payload.currentPassword = form.value.currentPassword;
+    }
+    await dataService.updateDoctor(props.doctor.id, payload);
     emit("submit", { ...form.value });
     showSavedChangesModal.value = true;
   } catch (e) {
-    alert("Failed to update doctor!");
+    console.error("Failed to update doctor:", e);
+    const msg = getApiErrorMessage(e, "Failed to update doctor!");
+    toast.error(msg);
   } finally {
     isLoading.value = false;
   }
@@ -97,6 +111,7 @@ const handleSubmit = async () => {
 const handleChangePasswordSubmit = (data) => {
   showChangePasswordModal.value = false;
   form.value.password = data.newPassword;
+  form.value.currentPassword = data.currentPassword;
 };
 
 const inputClass = (field) =>

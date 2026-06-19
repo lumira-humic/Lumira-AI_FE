@@ -100,6 +100,11 @@ const withFallback = async (primaryCall, fallbackCall) => {
   try {
     return await primaryCall();
   } catch (error) {
+    const status = error?.response?.status;
+    if (status === 400 || status === 401 || status === 403 || status === 409 || status === 422) {
+      throw error;
+    }
+
     if (!fallbackCall) {
       throw error;
     }
