@@ -95,7 +95,7 @@ const togglePassword = () => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center px-4">
+  <div class="fixed inset-0 !z-[1202] flex items-center justify-center px-4">
     <!-- Background Layout -->
     <div
       class="absolute inset-0 bg-black/40 backdrop-blur-sm"

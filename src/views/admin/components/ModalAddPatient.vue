@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 
 import { dataService } from "@/services/dataService";
 import { getApiErrorMessage } from "@/lib/apiResponse";
@@ -30,6 +30,10 @@ const isLoading = ref(false);
 const showSavedChangesModal = ref(false);
 const createdPatientData = ref(null);
 const formErrors = ref({});
+
+watch(() => form.value.name, () => { delete formErrors.value.name; });
+watch(() => form.value.email, () => { delete formErrors.value.email; });
+watch(() => form.value.password, () => { delete formErrors.value.password; });
 
 // ─── Validation helpers ────────────────────────────────────────────────────────
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

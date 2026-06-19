@@ -40,6 +40,7 @@ watch(
         password: "", // Reset password field
         status: newVal.status || "Active",
       };
+      formErrors.value = {};
     }
   },
   { immediate: true }
@@ -47,8 +48,35 @@ watch(
 
 
 const isLoading = ref(false);
+const formErrors = ref({});
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const validateForm = () => {
+  const errors = {};
+
+  if (!form.value.name || !form.value.name.trim()) {
+    errors.name = "Name is required.";
+  }
+
+  if (!form.value.email || !form.value.email.trim()) {
+    errors.email = "Email is required.";
+  } else if (!EMAIL_REGEX.test(form.value.email.trim())) {
+    errors.email = "Please enter a valid email address.";
+  }
+
+  formErrors.value = errors;
+  return Object.keys(errors).length === 0;
+};
+
+watch(() => form.value.name, () => { delete formErrors.value.name; });
+watch(() => form.value.email, () => { delete formErrors.value.email; });
 
 const handleSubmit = async () => {
+  formErrors.value = {};
+  if (!validateForm()) {
+    return;
+  }
   isLoading.value = true;
   try {
     await dataService.updateDoctor(props.doctor.id, {
@@ -68,9 +96,15 @@ const handleSubmit = async () => {
 
 const handleChangePasswordSubmit = (data) => {
   showChangePasswordModal.value = false;
-  // Set password di form edit doctor
   form.value.password = data.newPassword;
 };
+
+const inputClass = (field) =>
+  `flex-1 px-4 py-2.5 bg-gray-100 rounded-lg outline-none text-gray-700 transition-colors ${
+    formErrors.value[field]
+      ? "ring-2 ring-red-400 bg-red-50"
+      : "focus:ring-2 focus:ring-[#0099ff]"
+  }`;
 </script>
 
 <template>
@@ -84,24 +118,30 @@ const handleChangePasswordSubmit = (data) => {
   >
     <div class="space-y-6 px-2">
       <!-- Name -->
-      <div class="flex items-center gap-4">
-        <label class="w-24 text-sm font-semibold text-gray-600">Name</label>
-        <input
-          v-model="form.name"
-          type="text"
-          class="flex-1 px-4 py-2.5 bg-gray-100 rounded-lg outline-none text-gray-700"
-          required
-        />
+      <div>
+        <div class="flex items-center gap-4">
+          <label class="w-24 text-sm font-semibold text-gray-600">Name</label>
+          <input
+            v-model="form.name"
+            type="text"
+            :class="inputClass('name')"
+            required
+          />
+        </div>
+        <p v-if="formErrors.name" class="mt-1 pl-28 text-xs text-red-500">{{ formErrors.name }}</p>
       </div>
       <!-- Email -->
-      <div class="flex items-center gap-4">
-        <label class="w-24 text-sm font-semibold text-gray-600">Email</label>
-        <input
-          v-model="form.email"
-          type="email"
-          class="flex-1 px-4 py-2.5 bg-gray-100 rounded-lg outline-none text-gray-700"
-          required
-        />
+      <div>
+        <div class="flex items-center gap-4">
+          <label class="w-24 text-sm font-semibold text-gray-600">Email</label>
+          <input
+            v-model="form.email"
+            type="email"
+            :class="inputClass('email')"
+            required
+          />
+        </div>
+        <p v-if="formErrors.email" class="mt-1 pl-28 text-xs text-red-500">{{ formErrors.email }}</p>
       </div>
       <!-- Password -->
       <div class="flex items-center gap-4">
