@@ -62,6 +62,7 @@ const logsQuery = useQuery({
 const logs = computed(() =>
   Array.isArray(logsQuery.data.value?.items) ? logsQuery.data.value.items : [],
 )
+
 const meta = computed(() => logsQuery.data.value?.meta || { page: 1, limit: 10, total: 0, totalPages: 1 })
 
 const isLoading = computed(() => logsQuery.isPending.value && !logsQuery.data.value)

@@ -114,7 +114,10 @@ const withFallback = async (primaryCall, fallbackCall) => {
 export const dataService = {
   // Doctor Service
   async getDoctors() {
-    const payload = await getUnwrapped("/users", { params: { role: "doctor", page: 1, limit: 100 } });
+    const payload = await getUnwrapped("/users", {
+      params: { role: "doctor", page: 1, limit: 100, _t: Date.now() },
+      headers: { "Cache-Control": "no-cache", "Pragma": "no-cache", "Expires": "0" }
+    });
     return extractCollection(payload);
   },
 
@@ -153,7 +156,9 @@ export const dataService = {
         limit,
         ...(search ? { search } : {}),
         ...(status ? { status } : {}),
+        _t: Date.now(),
       },
+      headers: { "Cache-Control": "no-cache", "Pragma": "no-cache", "Expires": "0" }
     });
 
     const payload = unwrapApiData(rawResponse);
@@ -210,7 +215,8 @@ export const dataService = {
     // Pull all patient pages so the log view can be derived client-side.
     while (currentPage <= totalPages) {
       const { data } = await httpClient.get('/patients', {
-        params: { page: currentPage, limit: safeLimit },
+        params: { page: currentPage, limit: safeLimit, _t: Date.now() },
+        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache", "Expires": "0" }
       });
       const payload = unwrapApiData(data);
       const pagePatients = extractCollection(payload).map(normalizePatient);
@@ -283,15 +289,20 @@ export const dataService = {
       return b.rawDate - a.rawDate;
     });
 
-    // Filter by search (patient name or message)
+    // Assign sequence numbers (1-indexed based on sorted order)
+    logs.forEach((l, idx) => {
+      l.no = idx + 1;
+    });
+
+    // Filter by search (no, time, message)
     let filtered = logs;
     if (search) {
       const q = search.toLowerCase();
       filtered = filtered.filter(
         (l) =>
-          String(l.patientName || '').toLowerCase().includes(q) ||
-          String(l.message || '').toLowerCase().includes(q) ||
-          String(l.role || '').toLowerCase().includes(q),
+          String(l.no || '').includes(q) ||
+          String(l.time || '').toLowerCase().includes(q) ||
+          String(l.message || '').toLowerCase().includes(q),
       );
     }
 
@@ -309,10 +320,7 @@ export const dataService = {
     const total = filtered.length;
     const computedTotalPages = Math.max(1, Math.ceil(total / safeLimit));
     const start = (page - 1) * safeLimit;
-    const items = filtered.slice(start, start + safeLimit).map((l, idx) => ({
-      ...l,
-      no: start + idx + 1,
-    }));
+    const items = filtered.slice(start, start + safeLimit);
 
     return {
       items,

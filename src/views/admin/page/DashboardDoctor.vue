@@ -64,9 +64,8 @@ const filteredDoctors = computed(() => {
   const q = debouncedSearch.value.toLowerCase();
   return allDoctors.value.filter(
     (d) =>
-      String(d.name || "").toLowerCase().includes(q) ||
-      String(d.email || "").toLowerCase().includes(q) ||
-      String(d.id || "").toLowerCase().includes(q),
+      String(d.id || "").toLowerCase().includes(q) ||
+      String(d.name || "").toLowerCase().includes(q),
   );
 });
 
@@ -90,8 +89,9 @@ const errorMessage = computed(() =>
 );
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-const invalidateDoctors = () => {
-  queryClient.invalidateQueries({ queryKey: ["admin-dashboard-doctors"] });
+const invalidateDoctors = async () => {
+  await queryClient.invalidateQueries({ queryKey: ["admin-dashboard-doctors"] });
+  await doctorsQuery.refetch();
 };
 
 const handlePageChange = (page) => { currentPage.value = page; };
@@ -109,7 +109,7 @@ const handleAddDoctor = async () => {
   try {
     isAddModalOpen.value = false;
     toast.success("Doctor added successfully");
-    invalidateDoctors();
+    await invalidateDoctors();
   } catch (error) {
     console.error("Failed to finish add doctor sequence:", error);
   }
@@ -121,7 +121,7 @@ const handleEditDoctor = async (updatedDoctor) => {
     isEditModalOpen.value = false;
     selectedDoctor.value = null;
     toast.success("Doctor updated successfully");
-    invalidateDoctors();
+    await invalidateDoctors();
   } catch (error) {
     console.error("Failed to update doctor:", error);
     toast.error("Failed to update doctor");
@@ -134,7 +134,7 @@ const handleDeleteDoctor = async () => {
     isDeleteModalOpen.value = false;
     selectedDoctor.value = null;
     toast.success("Doctor deleted successfully");
-    invalidateDoctors();
+    await invalidateDoctors();
   } catch (error) {
     console.error("Failed to delete doctor:", error);
     toast.error("Failed to delete doctor");

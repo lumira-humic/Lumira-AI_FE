@@ -69,10 +69,8 @@ const filteredPatients = computed(() => {
   const q = debouncedSearch.value.toLowerCase();
   return allPatients.value.filter(
     (p) =>
-      String(p.name || "").toLowerCase().includes(q) ||
-      String(p.email || "").toLowerCase().includes(q) ||
       String(p.id || "").toLowerCase().includes(q) ||
-      String(p.phone || "").toLowerCase().includes(q),
+      String(p.name || "").toLowerCase().includes(q),
   );
 });
 
@@ -96,10 +94,13 @@ const errorMessage = computed(() =>
 );
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-const invalidatePatients = () => {
-  queryClient.invalidateQueries({ queryKey: ["admin-dashboard-patients"] });
+const invalidatePatients = async () => {
+  await queryClient.invalidateQueries({ queryKey: ["admin-dashboard-patients"] });
+  await patientsQuery.refetch();
 };
-const refetchPatients = async () => patientsQuery.refetch();
+const refetchPatients = async () => {
+  await patientsQuery.refetch();
+};
 
 const handlePageChange = (page) => { currentPage.value = page; };
 const handleItemsPerPageChange = (val) => {
@@ -128,7 +129,7 @@ const handleAddPatient = async (newPatient) => {
     } else {
       isAddModalOpen.value = false;
       toast.success("Patient added successfully");
-      invalidatePatients();
+      await invalidatePatients();
     }
   } catch (error) {
     console.error("Failed to add patient:", error);
@@ -152,7 +153,7 @@ const handleEditPatient = async (updatedPatient) => {
       isEditModalOpen.value = false;
       selectedPatient.value = null;
       toast.success("Patient updated successfully");
-      invalidatePatients();
+      await invalidatePatients();
     }
   } catch (error) {
     console.error("Failed to update patient:", error);
@@ -188,7 +189,7 @@ const handleDeletePatient = async () => {
     isDeleteModalOpen.value = false;
     selectedPatient.value = null;
     toast.success("Patient deleted successfully");
-    invalidatePatients();
+    await invalidatePatients();
   } catch (error) {
     console.error("Failed to delete patient:", error);
     toast.error("Failed to delete patient");

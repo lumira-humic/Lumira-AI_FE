@@ -81,6 +81,12 @@ const router = createRouter({
         { path: 'history', name: 'patient-history', component: PatientHistory },
         { path: 'records/:recordId', name: 'patient-record-detail', component: PatientRecordDetail, props: true }
       ]
+    },
+    // CATCH-ALL FOR 404 NOT FOUND
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/public/NotFoundView.vue')
     }
   ]
 })

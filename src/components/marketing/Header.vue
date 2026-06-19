@@ -123,6 +123,12 @@ onBeforeUnmount(() => {
         <li><a href="#features" @click="handleMobileNavClick">Key Features</a></li>
         <li><a href="#how-it-works" @click="handleMobileNavClick">How It Works</a></li>
         <li><a href="#why-us" @click="handleMobileNavClick">Why Choose Us?</a></li>
+        <button
+          @click="openLogin"
+          class="mt-4 text-lg bg-[#0093EE] hover:bg-white text-white hover:text-[#0093EE] hover:ring-none ring-2 ring-white px-6 py-2.5 rounded-xl font-semibold transition-colors cursor-pointer"
+        >
+          Login
+        </button>
       </ul>
     </aside>
   </Teleport>
